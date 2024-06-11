@@ -270,13 +270,13 @@ CROSS_PLATFORM_UUIDOF(IDxcCompilerArgs, "73EFFE2A-70DC-45F8-9690-EFF64C02429D")
 struct IDxcCompilerArgs : public IUnknown {
   /// \brief Retrieve the array of arguments.
   ///
-  /// This can be passed directly to the pArguments parameter of the Compile()
+  /// This can be passed directly to the pArguments parameter of the compile()
   /// method.
   virtual LPCWSTR *STDMETHODCALLTYPE GetArguments() = 0;
 
   /// \brief Retrieve the number of arguments.
   ///
-  /// This can be passed directly to the argCount parameter of the Compile()
+  /// This can be passed directly to the argCount parameter of the compile()
   /// method.
   virtual UINT32 STDMETHODCALLTYPE GetCount() = 0;
 
@@ -377,10 +377,10 @@ struct IDxcOperationResult : public IUnknown {
   /// \brief Retrieve the primary output of the operation.
   ///
   /// This corresponds to:
-  /// * DXC_OUT_OBJECT - Compile() with shader or library target
+  /// * DXC_OUT_OBJECT - compile() with shader or library target
   /// * DXC_OUT_DISASSEMBLY - Disassemble()
-  /// * DXC_OUT_HLSL - Compile() with -P
-  /// * DXC_OUT_ROOT_SIGNATURE - Compile() with rootsig_* target
+  /// * DXC_OUT_HLSL - compile() with -P
+  /// * DXC_OUT_ROOT_SIGNATURE - compile() with rootsig_* target
   virtual HRESULT STDMETHODCALLTYPE
   GetResult(_COM_Outptr_result_maybenull_ IDxcBlob **ppResult) = 0;
 
@@ -394,9 +394,9 @@ struct IDxcOperationResult : public IUnknown {
 CROSS_PLATFORM_UUIDOF(IDxcCompiler, "8c210bf3-011f-4422-8d70-6f9acb8db617")
 /// \deprecated Please use IDxcCompiler3 instead.
 struct IDxcCompiler : public IUnknown {
-  /// \brief Compile a single entry point to the target shader model.
+  /// \brief compile a single entry point to the target shader model.
   ///
-  /// \deprecated Please use IDxcCompiler3::Compile() instead.
+  /// \deprecated Please use IDxcCompiler3::compile() instead.
   virtual HRESULT STDMETHODCALLTYPE Compile(
       _In_ IDxcBlob *pSource,         // Source text to compile.
       _In_opt_z_ LPCWSTR pSourceName, // Optional file name for pSource. Used in
@@ -417,7 +417,7 @@ struct IDxcCompiler : public IUnknown {
 
   /// \brief Preprocess source text.
   ///
-  /// \deprecated Please use IDxcCompiler3::Compile() with the "-P" argument
+  /// \deprecated Please use IDxcCompiler3::compile() with the "-P" argument
   /// instead.
   virtual HRESULT STDMETHODCALLTYPE Preprocess(
       _In_ IDxcBlob *pSource,         // Source text to preprocess.
@@ -447,10 +447,10 @@ struct IDxcCompiler : public IUnknown {
 CROSS_PLATFORM_UUIDOF(IDxcCompiler2, "A005A9D9-B8BB-4594-B5C9-0E633BEC4D37")
 /// \deprecated Please use IDxcCompiler3 instead.
 struct IDxcCompiler2 : public IDxcCompiler {
-  /// \brief Compile a single entry point to the target shader model with debug
+  /// \brief compile a single entry point to the target shader model with debug
   /// information.
   ///
-  /// \deprecated Please use IDxcCompiler3::Compile() instead.
+  /// \deprecated Please use IDxcCompiler3::compile() instead.
   virtual HRESULT STDMETHODCALLTYPE CompileWithDebug(
       _In_ IDxcBlob *pSource,         // Source text to compile.
       _In_opt_z_ LPCWSTR pSourceName, // Optional file name for pSource. Used in
@@ -687,7 +687,7 @@ struct IDxcUtils : public IUnknown {
   virtual HRESULT STDMETHODCALLTYPE CreateReflection(
       _In_ const DxcBuffer *pData, REFIID iid, void **ppvReflection) = 0;
 
-  /// \brief Build arguments that can be passed to the Compile method.
+  /// \brief Build arguments that can be passed to the compile method.
   virtual HRESULT STDMETHODCALLTYPE BuildArguments(
       _In_opt_z_ LPCWSTR pSourceName, ///< Optional file name for pSource. Used
                                       ///< in errors and include handlers.
@@ -699,7 +699,7 @@ struct IDxcUtils : public IUnknown {
       _In_count_(defineCount) const DxcDefine *pDefines, ///< Array of defines.
       _In_ UINT32 defineCount,                           ///< Number of defines.
       _COM_Outptr_ IDxcCompilerArgs *
-          *ppArgs ///< Arguments you can use with Compile() method.
+          *ppArgs ///< Arguments you can use with compile() method.
       ) = 0;
 
   /// \brief Retrieve the hash and contents of a shader PDB.
@@ -832,16 +832,16 @@ CROSS_PLATFORM_UUIDOF(IDxcCompiler3, "228B4687-5A6A-4730-900C-9702B2203F54")
 /// Use DxcCreateInstance with CLSID_DxcCompiler to obtain an instance of this
 /// interface.
 struct IDxcCompiler3 : public IUnknown {
-  /// \brief Compile a shader.
+  /// \brief compile a shader.
   ///
   /// IDxcUtils::BuildArguments can be used to assist building the pArguments
   /// and argCount parameters.
   ///
   /// Depending on the arguments, this method can be used to:
   ///
-  /// * Compile a single entry point to the target shader model,
-  /// * Compile a library to a library target (-T lib_*)
-  /// * Compile a root signature (-T rootsig_*),
+  /// * compile a single entry point to the target shader model,
+  /// * compile a library to a library target (-T lib_*)
+  /// * compile a root signature (-T rootsig_*),
   /// * Preprocess HLSL source (-P).
   virtual HRESULT STDMETHODCALLTYPE Compile(
       _In_ const DxcBuffer *pSource, ///< Source text to compile.

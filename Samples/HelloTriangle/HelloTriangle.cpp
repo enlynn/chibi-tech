@@ -10,7 +10,7 @@
 #include <Systems/ResourceSystem.h>
 
 #include <Gpu/D3D12Common.h>
-#include <Gpu/gpu_render_pass.h>
+#include <Gpu/GpuRenderPass.h>
 #include <Gpu/GpuState.h>
 #include <Gpu/GpuBuffer.h>
 
@@ -43,17 +43,17 @@ class scene_pass
 public:
     scene_pass() = default;
 
-    void OnInit(struct gpu_frame_cache* FrameCache);
-    void OnDeinit(struct gpu_frame_cache* FrameCache);
-    void OnRender(struct gpu_frame_cache* FrameCache, class HelloTriangleApp* tApp);
+    void OnInit(struct GpuFrameCache* FrameCache);
+    void OnDeinit(struct GpuFrameCache* FrameCache);
+    void OnRender(struct GpuFrameCache* FrameCache, class HelloTriangleApp* tApp);
 
 private:
     static constexpr const char* ShaderName        = "TestTriangle";
     static constexpr const char* RootSignatureName = "Test Triangle Name";
 
-    gpu_root_signature mRootSignature{};
-    gpu_pso            mPso{};
-    gpu_render_target  mRenderTarget{};
+    GpuRootSignature mRootSignature{};
+    GpuPso            mPso{};
+    GpuRenderTarget  mRenderTarget{};
 };
 
 class resolve_pass
@@ -61,9 +61,9 @@ class resolve_pass
 public:
     resolve_pass() = default;
 
-    void OnInit(struct gpu_frame_cache* FrameCache);
-    void OnDeinit(struct gpu_frame_cache* FrameCache);
-    void OnRender(struct gpu_frame_cache* FrameCache);
+    void OnInit(struct GpuFrameCache* FrameCache);
+    void OnDeinit(struct GpuFrameCache* FrameCache);
+    void OnRender(struct GpuFrameCache* FrameCache);
 };
 
 
@@ -108,35 +108,35 @@ HelloTriangleApp::HelloTriangleApp()
 
 bool HelloTriangleApp::onInit(ct::Engine& tEngine) {
     auto gpuState = tEngine.getGpuState();
-    auto frameCache = gpuState->GetFrameCache();
+    auto frameCache = gpuState->getFrameCache();
 
     mScenePass.OnInit(frameCache);
     mResolvePass.OnInit(frameCache);
 
     ct::GeometryCube exampleCube = ct::makeCube(0.5f);
 
-    gpu_byte_address_buffer_info vertexInfo = {
+    GpuByteAddressBufferInfo vertexInfo = {
             .mStride = sizeof(exampleCube.mVertices[0]),
             .mCount  = ArrayCount(exampleCube.mVertices),
             .mData   = exampleCube.mVertices,
     };
-    mVertexResource = GpuBuffer::CreateByteAdressBuffer(frameCache, vertexInfo);
+    mVertexResource = GpuBuffer::createByteAdressBuffer(frameCache, vertexInfo);
 
-    gpu_index_buffer_info indexInfo = {
+    GpuIndexBufferInfo indexInfo = {
             .mIsU16      = true,
             .mIndexCount = ArrayCount(exampleCube.mIndices),
             .mIndices    = exampleCube.mIndices,
     };
-    mIndexResource = GpuBuffer::CreateIndexBuffer(frameCache, indexInfo);
+    mIndexResource = GpuBuffer::createIndexBuffer(frameCache, indexInfo);
 
-    gpu_structured_buffer_info PerObjectInfo = {};
+    GpuStructuredBufferInfo PerObjectInfo = {};
     PerObjectInfo.mCount  = 1; // only one object for now
     PerObjectInfo.mStride = sizeof(per_mesh_data);
     PerObjectInfo.mFrames = 3;
-    mPerObjectData = GpuBuffer::CreateStructuredBuffer(frameCache, PerObjectInfo);
+    mPerObjectData = GpuBuffer::createStructuredBuffer(frameCache, PerObjectInfo);
 
-    frameCache->SubmitCopyCommandList();
-    frameCache->FlushGPU(); // Forcibly upload all of the geometry (for now)
+    frameCache->submitCopyCommandList();
+    frameCache->flushGpu(); // Forcibly upload all of the geometry (for now)
 
     return true;
 }
@@ -145,11 +145,11 @@ bool HelloTriangleApp::onUpdate(ct::Engine& tEngine) {
     auto gpuState = tEngine.getGpuState();
 
     { // Let's make the cube spin!
-        mPerObjectData.Map(gpuState->mFrameCount);
-        auto* meshData = (per_mesh_data*)mPerObjectData.GetMappedData();
+        mPerObjectData.map(gpuState->mFrameCount);
+        auto* meshData = (per_mesh_data*) mPerObjectData.getMappedData();
 
         u32 windowWidth, windowHeight;
-        gpuState->mSwapchain->GetDimensions(windowWidth, windowHeight);
+        gpuState->mSwapchain->getDimensions(windowWidth, windowHeight);
 
         f32x44 ProjectionMatrix = PerspectiveMatrixRH(45.0f, (f32)windowWidth / (f32)windowHeight, 0.01f, 100.0f);
         f32x44 LookAtMatrix     = LookAtMatrixRH({0,0,5}, {0,0,-1}, {0,1,0});
@@ -171,7 +171,7 @@ bool HelloTriangleApp::onUpdate(ct::Engine& tEngine) {
 
         meshData[0].Transforms = F32x44MulRH(translationMatrix, spinnyMatrix);
 
-        mPerObjectData.Unmap();
+        mPerObjectData.unmap();
     }
 
     return true;
@@ -182,7 +182,7 @@ bool HelloTriangleApp::onRender(ct::Engine& tEngine) {
 
     gpuState->beginFrame();
 
-    auto frameCache = gpuState->GetFrameCache();
+    auto frameCache = gpuState->getFrameCache();
     mScenePass.OnRender(frameCache, this);
     mResolvePass.OnRender(frameCache);
 
@@ -196,7 +196,7 @@ bool HelloTriangleApp::onDestroy() {
     return true;
 }
 
-void scene_pass::OnInit(gpu_frame_cache* tFrameCache)
+void scene_pass::OnInit(GpuFrameCache* tFrameCache)
 {
     auto pEngine = ct::getEngine();
 
@@ -204,22 +204,22 @@ void scene_pass::OnInit(gpu_frame_cache* tFrameCache)
     ct::ShaderResource pixelShader  = pEngine->loadShader("TestTriangle", ct::ShaderStage::Pixel);
 
     { // Create a simple root signature
-        gpu_root_descriptor VertexBuffers[]    = {
-                { .mRootIndex = u32(triangle_root_parameter::vertex_buffer), .mType = gpu_descriptor_type::srv },
-                { .mRootIndex = u32(triangle_root_parameter::mesh_data),     .mType = gpu_descriptor_type::srv, .mFlags = gpu_descriptor_range_flags::none, .mShaderRegister = 1, .mRegisterSpace = 1 }
+        GpuRootDescriptor VertexBuffers[]    = {
+                { .mRootIndex = u32(triangle_root_parameter::vertex_buffer), .mType = GpuDescriptorType::Srv },
+                { .mRootIndex = u32(triangle_root_parameter::mesh_data),     .mType = GpuDescriptorType::Srv, .mFlags = GpuDescriptorRangeFlags::None, .mShaderRegister = 1, .mRegisterSpace = 1 }
         };
 
-        gpu_root_constant   PerDrawConstants[] = { { .mRootIndex = u32(triangle_root_parameter::per_draw), .mNum32bitValues = sizeof(vertex_draw_constants) / 4 } };
+        GpuRootConstant   PerDrawConstants[] = {{ .mRootIndex = u32(triangle_root_parameter::per_draw), .mNum32bitValues = sizeof(vertex_draw_constants) / 4 } };
         const char*         DebugName          = "Scene Pass Root Signature";
 
-        gpu_root_signature_info Info = {};
-        Info.Descriptors         = farray(VertexBuffers, ArrayCount(VertexBuffers));
-        Info.DescriptorConstants = farray(PerDrawConstants, ArrayCount(PerDrawConstants));
-        Info.Name                = DebugName;
-        mRootSignature = gpu_root_signature(*tFrameCache->GetDevice(), Info);
+        GpuRootSignatureInfo Info = {};
+        Info.mDescriptors         = farray(VertexBuffers, ArrayCount(VertexBuffers));
+        Info.mDescriptorConstants = farray(PerDrawConstants, ArrayCount(PerDrawConstants));
+        Info.mName                = DebugName;
+        mRootSignature = GpuRootSignature(*tFrameCache->getDevice(), Info);
     }
 
-    DXGI_FORMAT RTFormat = tFrameCache->mGlobal->mSwapchain->GetSwapchainFormat();
+    DXGI_FORMAT RTFormat = tFrameCache->mGlobal->mSwapchain->getSwapchainFormat();
 
     { // Create a simple pso
         D3D12_RT_FORMAT_ARRAY PsoRTFormats = {};
@@ -230,106 +230,109 @@ void scene_pass::OnInit(gpu_frame_cache* tFrameCache)
         u32 SampleQuality = 0;
         if (cEnableMSAA)
         {
-            gpu_device* Device = tFrameCache->GetDevice();
+            GpuDevice* Device = tFrameCache->getDevice();
 
-            DXGI_SAMPLE_DESC Samples = Device->GetMultisampleQualityLevels(RTFormat);
+            DXGI_SAMPLE_DESC Samples = Device->getMultisampleQualityLevels(RTFormat);
             SampleCount   = Samples.Count;
             SampleQuality = Samples.Quality;
         }
 
-        gpu_graphics_pso_builder Builder = gpu_graphics_pso_builder::Builder();
-        Builder.SetRootSignature(&mRootSignature)
-                .SetVertexShader(vertexShader)
-                .SetPixelShader(pixelShader)
-                .SetRenderTargetFormats({ tFrameCache->mGlobal->mSwapchain->GetSwapchainFormat() })
-                .SetSampleQuality(SampleCount, SampleQuality)
-                .SetDepthStencilState(GetDepthStencilState(gpu_depth_stencil_state::read_write), DXGI_FORMAT_D32_FLOAT);
+        GpuGraphicsPsoBuilder Builder = GpuGraphicsPsoBuilder::builder();
+        Builder.setRootSignature(&mRootSignature)
+                .setVertexShader(vertexShader)
+                .setPixelShader(pixelShader)
+                .setRenderTargetFormats({tFrameCache->mGlobal->mSwapchain->getSwapchainFormat()})
+                .setSampleQuality(SampleCount, SampleQuality)
+                .setDepthStencilState(getDepthStencilState(GpuDepthStencilState::ReadWrite), DXGI_FORMAT_D32_FLOAT);
 
-        mPso = Builder.Compile(tFrameCache);
+        mPso = Builder.compile(tFrameCache);
     }
 }
 
-void scene_pass::OnDeinit(gpu_frame_cache* FrameCache)
+void scene_pass::OnDeinit(GpuFrameCache* FrameCache)
 {
-    mPso.Release();
-    mRootSignature.Release();
+    mPso.release();
+    mRootSignature.release();
 
-    mRenderTarget.Reset();
+    mRenderTarget.reset();
 }
 
-void scene_pass::OnRender(gpu_frame_cache* tFrameCache, HelloTriangleApp* tApp)
+void scene_pass::OnRender(GpuFrameCache* tFrameCache, HelloTriangleApp* tApp)
 {
-    mRenderTarget.Reset();
+    mRenderTarget.reset();
 
-    gpu_texture* SceneFramebuffer = tFrameCache->GetFramebuffer(gpu_framebuffer_binding::main_color);
-    gpu_texture* DepthBuffer      = tFrameCache->GetFramebuffer(gpu_framebuffer_binding::depth_stencil);
+    GpuTexture* SceneFramebuffer = tFrameCache->getFramebuffer(GpuFramebufferBinding::MainColor);
+    GpuTexture* DepthBuffer      = tFrameCache->getFramebuffer(GpuFramebufferBinding::DepthStencil);
 
-    mRenderTarget.AttachTexture(attachment_point::color0, SceneFramebuffer);
-    mRenderTarget.AttachTexture(attachment_point::depth_stencil, DepthBuffer);
+    mRenderTarget.attachTexture(AttachmentPoint::Color0, SceneFramebuffer);
+    mRenderTarget.attachTexture(AttachmentPoint::DepthStencil, DepthBuffer);
 
-    gpu_command_list* commandList = tFrameCache->GetGraphicsCommandList();
+    GpuCommandList* commandList = tFrameCache->getGraphicsCommandList();
 
     // Clear the Framebuffer and bind the render target.
-    tFrameCache->TransitionResource(SceneFramebuffer->GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
-    tFrameCache->TransitionResource(DepthBuffer->GetResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
+    tFrameCache->transitionResource(SceneFramebuffer->getResource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+    tFrameCache->transitionResource(DepthBuffer->getResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
     f32x4 ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
-    commandList->BindRenderTarget(&mRenderTarget, &ClearColor, true);
+    commandList->bindRenderTarget(&mRenderTarget, &ClearColor, true);
 
     // Scissor / Viewport
-    D3D12_VIEWPORT Viewport = mRenderTarget.GetViewport();
-    commandList->SetViewport(Viewport);
+    D3D12_VIEWPORT Viewport = mRenderTarget.getViewport();
+    commandList->setViewport(Viewport);
 
     D3D12_RECT ScissorRect = {};
     ScissorRect.left   = 0;
     ScissorRect.top    = 0;
     ScissorRect.right  = (LONG)Viewport.Width;
     ScissorRect.bottom = (LONG)Viewport.Height;
-    commandList->SetScissorRect(ScissorRect);
+    commandList->setScissorRect(ScissorRect);
 
     // Draw some geomtry
 
-    commandList->SetPipelineState(mPso);
-    commandList->SetGraphicsRootSignature(mRootSignature);
+    commandList->setPipelineState(mPso);
+    commandList->setGraphicsRootSignature(mRootSignature);
 
-    commandList->SetTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    commandList->setTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    commandList->SetIndexBuffer(tApp->mIndexResource.GetIndexBufferView());
-    commandList->SetShaderResourceViewInline(u32(triangle_root_parameter::vertex_buffer), tApp->mVertexResource.GetGPUResource());
-    commandList->SetShaderResourceViewInline(u32(triangle_root_parameter::mesh_data), tApp->mPerObjectData.GetGPUResource(), tApp->mPerObjectData.GetMappedDataOffset());
+    commandList->setIndexBuffer(tApp->mIndexResource.getIndexBufferView());
+    commandList->setShaderResourceViewInline(u32(triangle_root_parameter::vertex_buffer),
+                                             tApp->mVertexResource.getGpuResource());
+    commandList->setShaderResourceViewInline(u32(triangle_root_parameter::mesh_data),
+                                             tApp->mPerObjectData.getGpuResource(),
+                                             tApp->mPerObjectData.getMappedDataOffset());
 
     vertex_draw_constants Constants = {};
-    commandList->SetGraphics32BitConstants(u32(triangle_root_parameter::per_draw), &Constants);
+    commandList->setGraphics32BitConstants(u32(triangle_root_parameter::per_draw), &Constants);
 
-    tFrameCache->FlushResourceBarriers(commandList); // Flush barriers before drawing
+    tFrameCache->flushResourceBarriers(commandList); // flush barriers before drawing
 
-    commandList->DrawIndexedInstanced(tApp->mIndexResource.GetIndexCount());
+    commandList->drawIndexedInstanced(tApp->mIndexResource.getIndexCount());
 }
 
-void resolve_pass::OnInit(gpu_frame_cache* FrameCache)   {} // Does not need to initialize frame resources
-void resolve_pass::OnDeinit(gpu_frame_cache* FrameCache) {} // No Resources to clean up
+void resolve_pass::OnInit(GpuFrameCache* FrameCache)   {} // Does not need to initialize frame resources
+void resolve_pass::OnDeinit(GpuFrameCache* FrameCache) {} // No Resources to clean up
 
-void resolve_pass::OnRender(gpu_frame_cache* tFrameCache)
+void resolve_pass::OnRender(GpuFrameCache* tFrameCache)
 {
-    gpu_command_list* commandList = tFrameCache->GetGraphicsCommandList();
+    GpuCommandList* commandList = tFrameCache->getGraphicsCommandList();
 
-    gpu_render_target* SwapchainRenderTarget = tFrameCache->mGlobal->mSwapchain->GetRenderTarget();
+    GpuRenderTarget* SwapchainRenderTarget = tFrameCache->mGlobal->mSwapchain->getRenderTarget();
 
-    const gpu_texture* SwapchainBackBuffer = SwapchainRenderTarget->GetTexture(attachment_point::color0);
-    const gpu_texture* SceneTexture        = tFrameCache->GetFramebuffer(gpu_framebuffer_binding::main_color);
+    const GpuTexture* SwapchainBackBuffer = SwapchainRenderTarget->getTexture(AttachmentPoint::Color0);
+    const GpuTexture* SceneTexture        = tFrameCache->getFramebuffer(GpuFramebufferBinding::MainColor);
 
-    bool MSAAEnabled = SceneTexture->GetResourceDesc().SampleDesc.Count > 1;
+    bool MSAAEnabled = SceneTexture->getResourceDesc().SampleDesc.Count > 1;
     if (MSAAEnabled)
     {
-        commandList->ResolveSubresource(tFrameCache, SwapchainBackBuffer->GetResource(), SceneTexture->GetResource());
+        commandList->resolveSubresource(tFrameCache, SwapchainBackBuffer->getResource(), SceneTexture->getResource());
     }
     else
     {
-        commandList->CopyResource(tFrameCache, SwapchainBackBuffer->GetResource(), SceneTexture->GetResource());
+        commandList->copyResource(tFrameCache, SwapchainBackBuffer->getResource(), SceneTexture->getResource());
     }
 
-    tFrameCache->TransitionResource(SwapchainBackBuffer->GetResource(), D3D12_RESOURCE_STATE_PRESENT);
-    tFrameCache->FlushResourceBarriers(commandList);
+    tFrameCache->transitionResource(SwapchainBackBuffer->getResource(), D3D12_RESOURCE_STATE_PRESENT);
+    tFrameCache->flushResourceBarriers(commandList);
 }
 
 // entry point

@@ -4,10 +4,10 @@
 
 #include "D3D12Common.h"
 
-#include "gpu_resource.h"
-#include "gpu_descriptor_allocator.h"
+#include "GpuResource.h"
+#include "GpuDescriptorAllocator.h"
 
-class gpu_command_list;
+class GpuCommandList;
 
 //
 // Some thoughts:
@@ -17,32 +17,24 @@ class gpu_command_list;
 // --- This is the responsibility of a higher level structure (i.e. mesh_manager)
 // 
 
-enum class gpu_buffer_type : u8
+enum class GpuBufferType : u8
 {
-    unknown,
-    vertex,       // TODO: Unsupported
-    index,
-    structured,
-    byte_address,
+    Unknown,
+    Vertex,       // TODO: Unsupported
+    Index,
+    Structured,
+    ByteAddress,
 };
 
-// struct gpu_vertex_buffer_info
-// {
-// };
-
-struct gpu_index_buffer_info
+struct GpuIndexBufferInfo
 {
     bool          mIsU16        = false;   // If false, then assumed to be U32
     u32           mIndexCount   = 0;
     void*         mIndices      = nullptr;
-    gpu_resource* mBufferHandle = nullptr;
+    GpuResource*  mBufferHandle = nullptr;
 };
 
-// struct gpu_structured_buffer_info
-// {
-// };
-
-struct gpu_byte_address_buffer_info
+struct GpuByteAddressBufferInfo
 {
     //bool                mCpuVisible         = false;   // If True, then can write to the buffer without needing an intermediate buffer
     bool                mCreateResourceView = false;
@@ -50,10 +42,10 @@ struct gpu_byte_address_buffer_info
     u32                 mCount              = 1;       // FrameSize = mStride * mCount
     u32                 mBufferFrames       = 1;       // TotalSize = FrameSize * mBufferFrames
     void*               mData               = nullptr;
-    //gpu_resource*       mBufferHandle       = nullptr;
+    //GpuResource*       mBufferHandle       = nullptr;
 };
 
-struct gpu_structured_buffer_info
+struct GpuStructuredBufferInfo
 {
     u64  mCount        = 0;     // Number of Elements in the buffer
     u64  mStride       = 0;     // Per-Element Size
@@ -69,39 +61,39 @@ public:
 
     // Helper functions to make specific buffer types.
     //static GpuBuffer MakeVertexBuffer();
-    static GpuBuffer CreateIndexBuffer(struct gpu_frame_cache* FrameCache, gpu_index_buffer_info& Info);
+    static GpuBuffer createIndexBuffer(struct GpuFrameCache *FrameCache, GpuIndexBufferInfo& Info);
     //static GpuBuffer MakeStructuredBuffer();
-    static GpuBuffer CreateByteAdressBuffer(struct gpu_frame_cache* FrameCache, gpu_byte_address_buffer_info& Info);
+    static GpuBuffer createByteAdressBuffer(struct GpuFrameCache *FrameCache, GpuByteAddressBufferInfo &Info);
 
-    static GpuBuffer CreateStructuredBuffer(gpu_frame_cache* FrameCache, gpu_structured_buffer_info& Info);
+    static GpuBuffer createStructuredBuffer(GpuFrameCache* FrameCache, GpuStructuredBufferInfo& Info);
 
-    void Map(u64 Frame);
-    void Unmap();
-    void* GetMappedData()       const { return mFrameData;                      }
-    u64   GetMappedDataOffset() const { return mMappedFrame * mStride * mCount; }
+    void map(u64 Frame);
+    void unmap();
+    void* getMappedData()       const { return mFrameData;                      }
+    u64   getMappedDataOffset() const { return mMappedFrame * mStride * mCount; }
 
     // Convenience functions for accessing the buffer views
-    D3D12_INDEX_BUFFER_VIEW  GetIndexBufferView()       const { return _views.mIndexView;    }
-    D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView()      const { return _views.mVertexView;   }
-    cpu_descriptor           GetResourceView()          const { return _views.mResourceView; }
-    cpu_descriptor           GetConstantBufferView()    const { return GetResourceView();    }
-    cpu_descriptor           GetStructuredBufferView()  const { return GetResourceView();    }
-    cpu_descriptor           GetByteAddressBufferView() const { return GetResourceView();    }
+    D3D12_INDEX_BUFFER_VIEW  getIndexBufferView()       const { return mViews.mIndexView;    }
+    D3D12_VERTEX_BUFFER_VIEW getVertexBufferView()      const { return mViews.mVertexView;   }
+    CpuDescriptor           getResourceView()          const { return mViews.mResourceView; }
+    CpuDescriptor           getConstantBufferView()    const { return getResourceView();    }
+    CpuDescriptor           getStructuredBufferView()  const { return getResourceView();    }
+    CpuDescriptor           GetByteAddressBufferView() const { return getResourceView();    }
 
-    u32                       GetIndexCount()  const { return mCount;             }
-    D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress()  const { mResource.GetGPUAddress(); }
-    gpu_resource*             GetGPUResource()       { return &mResource;         }
+    u32                       getIndexCount()  const { return mCount;             }
+    D3D12_GPU_VIRTUAL_ADDRESS getGpuAddress()  const { mResource.getGpuAddress(); }
+    GpuResource*              getGpuResource()       { return &mResource;         }
 
 private: 
-    static gpu_resource CopyBuffer(
-        struct gpu_frame_cache* FrameCache,  
-        void*                   BufferData, 
-        u64                     BufferSize, 
-        D3D12_RESOURCE_FLAGS    Flags              = D3D12_RESOURCE_FLAG_NONE, 
-        D3D12_RESOURCE_STATES   InitialBufferState = D3D12_RESOURCE_STATE_COMMON);
+    static GpuResource copyBuffer(
+            struct GpuFrameCache *FrameCache,
+            void*                   BufferData,
+            u64                     BufferSize,
+            D3D12_RESOURCE_FLAGS    Flags              = D3D12_RESOURCE_FLAG_NONE,
+            D3D12_RESOURCE_STATES   InitialBufferState = D3D12_RESOURCE_STATE_COMMON);
 
-    gpu_buffer_type mType         = gpu_buffer_type::unknown;
-    gpu_resource    mResource     = {};
+    GpuBufferType mType         = GpuBufferType::Unknown;
+    GpuResource    mResource     = {};
 
     u32             mStride       = 0;
     u32             mCount        = 0;
@@ -120,6 +112,6 @@ private:
     {
         D3D12_INDEX_BUFFER_VIEW  mIndexView = {};    // Index Buffers
         D3D12_VERTEX_BUFFER_VIEW mVertexView;        // mVertex Buffers
-        cpu_descriptor           mResourceView;      // Byte Address, Structured, and Constant Buffers
-    } _views;
+        CpuDescriptor           mResourceView;      // Byte Address, Structured, and Constant Buffers
+    } mViews;
 };

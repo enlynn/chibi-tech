@@ -36,7 +36,7 @@ namespace ct {
         // 4 unique texture coordinates
         f32x2 t[4] = { { 0, 0 }, { 1, 0 }, { 1, 1 }, { 0, 1 } };
 
-        // Indices for the vertex positions.
+        // Indices for the Vertex positions.
         u16 i[24] = {
                 0, 1, 2, 3,  // +X
                 4, 5, 6, 7,  // -X

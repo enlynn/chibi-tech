@@ -2,29 +2,29 @@
 
 #include "d3d12/d3d12.h"
 #include "D3D12Common.h"
-#include "gpu_utils.h"
+#include "GpuUtils.h"
 
 constexpr bool cEnableMSAA = false;
 
 namespace {
-    gpu_texture CreateFramebufferImage(gpu_frame_cache* tFrameCache, bool tIsDepth = false)
+    GpuTexture CreateFramebufferImage(GpuFrameCache* tFrameCache, bool tIsDepth = false)
     {
-        gpu_swapchain* swapchain = tFrameCache->mGlobal->mSwapchain.get();
+        GpuSwapchain* swapchain = tFrameCache->mGlobal->mSwapchain.get();
 
         // In the future, will want to make this variable.
-        DXGI_FORMAT FramebufferFormat = swapchain->GetSwapchainFormat();
+        DXGI_FORMAT FramebufferFormat = swapchain->getSwapchainFormat();
 
         // For now, these will match the dimensions of the swapchain
         u32 FramebufferWidth, FramebufferHeight;
-        swapchain->GetDimensions(FramebufferWidth, FramebufferHeight);
+        swapchain->getDimensions(FramebufferWidth, FramebufferHeight);
 
         u32 SampleCount   = 1;
         u32 SampleQuality = 0;
         if (cEnableMSAA)
         {
-            gpu_device* Device = tFrameCache->GetDevice();
+            GpuDevice* Device = tFrameCache->getDevice();
 
-            DXGI_SAMPLE_DESC Samples = Device->GetMultisampleQualityLevels(FramebufferFormat);
+            DXGI_SAMPLE_DESC Samples = Device->getMultisampleQualityLevels(FramebufferFormat);
             SampleCount   = Samples.Count;
             SampleQuality = Samples.Quality;
         }
@@ -32,7 +32,7 @@ namespace {
         // If this is
         FramebufferFormat = (tIsDepth) ? DXGI_FORMAT_D32_FLOAT : FramebufferFormat;
 
-        D3D12_RESOURCE_DESC ImageDesc = GetTex2DDesc(
+        D3D12_RESOURCE_DESC ImageDesc = getTex2DDesc(
                 FramebufferFormat, FramebufferWidth, FramebufferHeight,
                 1, 1, SampleCount, SampleQuality);
 
@@ -57,25 +57,25 @@ namespace {
             ClearValue.Color[3] = 1.0f;
         }
 
-        gpu_resource ImageResource = gpu_resource(*tFrameCache->GetDevice(), ImageDesc, ClearValue);
-        return gpu_texture(tFrameCache, ImageResource);
+        GpuResource ImageResource = GpuResource(*tFrameCache->getDevice(), ImageDesc, ClearValue);
+        return GpuTexture(tFrameCache, ImageResource);
     }
 }
 
 GpuState::GpuState(const ct::os::Window& tWindow) {
 
-    mDevice = std::make_unique<gpu_device>();
-    mDevice->Init();
+    mDevice = std::make_unique<GpuDevice>();
+    mDevice->init();
 
-    mGraphicsQueue = std::make_unique<gpu_command_queue>(gpu_command_queue_type::graphics, mDevice.get());
-    mCopyQueue     = std::make_unique<gpu_command_queue>(gpu_command_queue_type::copy,     mDevice.get());
-    mComputeQueue  = std::make_unique<gpu_command_queue>(gpu_command_queue_type::compute,  mDevice.get());
+    mGraphicsQueue = std::make_unique<GpuCommandQueue>(GpuCommandQueueType::Graphics, mDevice.get());
+    mCopyQueue     = std::make_unique<GpuCommandQueue>(GpuCommandQueueType::Copy, mDevice.get());
+    mComputeQueue  = std::make_unique<GpuCommandQueue>(GpuCommandQueueType::Compute, mDevice.get());
 
-    mGlobalResourceState = std::make_unique<gpu_global_resource_state>();
+    mGlobalResourceState = std::make_unique<GpuGlobalResourceState>();
     mGlobalResourceState->mKnownStates.reserve(10);
 
     for (size_t i = 0; i < mStaticDescriptors.size(); ++i) {
-        mStaticDescriptors[i].Init(mDevice.get(), (D3D12_DESCRIPTOR_HEAP_TYPE)i);
+        mStaticDescriptors[i].init(mDevice.get(), (D3D12_DESCRIPTOR_HEAP_TYPE) i);
     }
 
     //
@@ -84,9 +84,9 @@ GpuState::GpuState(const ct::os::Window& tWindow) {
 
     for (auto& cache : mPerFrameCache)
     {
-        cache = std::make_unique<gpu_frame_cache>();
+        cache = std::make_unique<GpuFrameCache>();
         cache->mGlobal               = this;
-        cache->mResourceStateTracker = gpu_resource_state_tracker();
+        cache->mResourceStateTracker = GpuResourceStateTracker();
         cache->mStaleResources.reserve(5);
     }
 
@@ -94,40 +94,40 @@ GpuState::GpuState(const ct::os::Window& tWindow) {
     // Let's setup the swapchain now
     //
 
-    gpu_swapchain_info swapchainInfo = {
+    GpuSwapchainInfo swapchainInfo = {
             .mDevice                    = mDevice.get(),
             .mPresentQueue              = mGraphicsQueue.get(),
             .mRenderTargetDesciptorHeap = &mStaticDescriptors[D3D12_DESCRIPTOR_HEAP_TYPE_RTV],
             // Leave everything else at their defaults for now...
     };
 
-    gpu_frame_cache* frameCache = GetFrameCache();
-    mSwapchain = std::make_unique<gpu_swapchain>(frameCache, swapchainInfo, tWindow);
+    GpuFrameCache* frameCache = getFrameCache();
+    mSwapchain = std::make_unique<GpuSwapchain>(frameCache, swapchainInfo, tWindow);
 
     // Create the scene framebuffers
     for (auto& cache : mPerFrameCache)
     {
-        ForRange(int, FramebufferIndex, int(gpu_framebuffer_binding::max))
+        ForRange(int, FramebufferIndex, int(GpuFramebufferBinding::Max))
         {
-            cache->mFramebuffers[FramebufferIndex] = CreateFramebufferImage(cache.get(), FramebufferIndex == int(gpu_framebuffer_binding::depth_stencil));
+            cache->mFramebuffers[FramebufferIndex] = CreateFramebufferImage(cache.get(), FramebufferIndex == int(GpuFramebufferBinding::DepthStencil));
         }
     }
 
 }
 
 bool GpuState::beginFrame() {
-    gpu_frame_cache* frameCache = GetFrameCache();
+    GpuFrameCache* frameCache = getFrameCache();
 
     //------------------------------------------------------------------------------------------------------------------
     // Begin Frame Cache Cleanup
 
-    // Reset the Per-Frame State Tracker
-    frameCache->mResourceStateTracker.Reset();
+    // reset the Per-Frame State Tracker
+    frameCache->mResourceStateTracker.reset();
 
     // Update any pending command lists
-    mGraphicsQueue->ProcessCommandLists();
-    mCopyQueue->ProcessCommandLists();
-    mComputeQueue->ProcessCommandLists();
+    mGraphicsQueue->processCommandLists();
+    mCopyQueue->processCommandLists();
+    mComputeQueue->processCommandLists();
 
     // Clean up any previous resources
     frameCache->releaseStateResources();
@@ -140,13 +140,13 @@ bool GpuState::beginFrame() {
 }
 
 bool GpuState::endFrame() {
-    gpu_frame_cache* frameCache = GetFrameCache();
+    GpuFrameCache* frameCache = getFrameCache();
 
-    frameCache->SubmitGraphicsCommandList();
-    frameCache->SubmitComputeCommandList();
-    frameCache->SubmitCopyCommandList();
+    frameCache->submitGraphicsCommandList();
+    frameCache->submitComputeCommandList();
+    frameCache->submitCopyCommandList();
 
-    mSwapchain->Present();
+    mSwapchain->present();
 
     mFrameCount += 1;
 
@@ -154,13 +154,13 @@ bool GpuState::endFrame() {
 }
 
 void GpuState::destroy() {
-    mGraphicsQueue->Flush();
-    mCopyQueue->Flush();
-    mComputeQueue->Flush();
+    mGraphicsQueue->flush();
+    mCopyQueue->flush();
+    mComputeQueue->flush();
 
-    gpu_frame_cache* frameCache = GetFrameCache();
+    GpuFrameCache* frameCache = getFrameCache();
 
-    mSwapchain->Release(frameCache);
+    mSwapchain->release(frameCache);
 
     // Free any stale resources
     for (auto& cache : mPerFrameCache)
@@ -169,10 +169,10 @@ void GpuState::destroy() {
     }
 }
 
-void gpu_frame_cache::releaseStateResources() {
-    for (gpu_resource& Resource : mStaleResources)
+void GpuFrameCache::releaseStateResources() {
+    for (GpuResource& Resource : mStaleResources)
     {
-        ID3D12Resource* ResourceHandle = Resource.AsHandle();
+        ID3D12Resource* ResourceHandle = Resource.asHandle();
         ComSafeRelease(ResourceHandle);
     }
 

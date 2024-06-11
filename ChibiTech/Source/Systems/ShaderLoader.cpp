@@ -129,7 +129,7 @@ namespace ct {
                 &compileStatus));    // ppResult
 
         if (SUCCEEDED(hr)) {
-            // we can succeed the Compile call, but failed to compile. Get the status of the compilation.
+            // we can succeed the compile call, but failed to compile. Get the status of the compilation.
             compileStatus->GetStatus(&hr);
         }
 

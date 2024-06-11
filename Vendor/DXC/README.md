@@ -107,7 +107,7 @@ DX Compiler release for December 2022.
   - Improved template utility with user-defined types
   - Many additional bug fixes
 - Linux binaries are now included.
- This includes the compiler executable, the dynamic library, and the dxil signing library.
+ This includes the compiler executable, the Dynamic library, and the dxil signing library.
 - New flags for inspecting compile times:
   - `-ftime-report` flag prints a high level summary of compile time broken down by major phase or pass in the compiler. The DXC
 command line will print the output to stdout.
