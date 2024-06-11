@@ -31,9 +31,10 @@
 *.out
 *.app
 
-cmake-build-debug
+/cmake-build-debug
+/cmake-build-debug-visual-studio/
+/.idea/
 
-
-.idea
 .idea/*
 **/.cache/**
+
