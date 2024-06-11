@@ -1,2 +1,4 @@
-# chibi-ray
-A smol raytracer in c++ using bgfx and glfw.
+# Chibi Tech
+A smol playground for learning DX12 and Engine development.
+
+
