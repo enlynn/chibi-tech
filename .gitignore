@@ -38,3 +38,5 @@
 .idea/*
 **/.cache/**
 
+/out/
+/.vs/

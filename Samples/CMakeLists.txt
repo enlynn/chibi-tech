@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 3.27)
 
 function(BuildSample EXAMPLE_NAME)
     SET(SAMPLE_FOLDER ${CMAKE_CURRENT_SOURCE_DIR}/${EXAMPLE_NAME})
@@ -17,7 +17,7 @@ function(BuildSample EXAMPLE_NAME)
             ${SAMPLE_FOLDER} "../Vendor" "../Vendor/AgilitySDK/"
     )
 
-    add_compile_definitions(${EXAMPLE_NAME} PRIVATE CONTENT_PATH="${SAMPLE_FOLDER}/Content")
+    add_compile_definitions(${EXAMPLE_NAME} PRIVATE ${EXAMPLE_NAME}_CONTENT_PATH="${SAMPLE_FOLDER}/Content")
 
     IF (WIN32)
         add_compile_definitions(${EXAMPLE_NAME} PRIVATE CT_PLATFORM_WINDOWS)
@@ -32,6 +32,7 @@ endfunction(BuildSamples)
 
 set(SAMPLES
         HelloTriangle
+        HelloCube
 )
 
 BuildSamples()

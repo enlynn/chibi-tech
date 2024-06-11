@@ -145,7 +145,7 @@ class GpuRootSignature
 {
 public:
 	GpuRootSignature() = default;
-    GpuRootSignature(const GpuDevice& Device, const GpuRootSignatureInfo& Info);
+    GpuRootSignature(const GpuDevice& tDevice, const GpuRootSignatureInfo& tInfo);
 
     u32 getDescriptorTableBitmask(GpuDescriptorType HeapType) const;
     u32 getNumDescriptors(u32 RootIndex)                        const;

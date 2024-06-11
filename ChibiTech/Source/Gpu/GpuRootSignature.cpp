@@ -1,6 +1,7 @@
 #include "GpuRootSignature.h"
 #include "GpuDevice.h"
 
+#include <Platform/Platform.h>
 #include <Platform/Assert.h>
 #include <Platform/Console.h>
 #include <Util/bit.h>
@@ -36,20 +37,20 @@ GfxDescriptorTypeToDescriptorParamter(GpuDescriptorType Type)
     return D3D12_ROOT_PARAMETER_TYPE_CBV;
 }
 
-GpuRootSignature::GpuRootSignature(const GpuDevice& Device, const GpuRootSignatureInfo& Info)
+GpuRootSignature::GpuRootSignature(const GpuDevice& tDevice, const GpuRootSignatureInfo& tInfo)
 {
     // A Root Descriptor can have up to 64 DWORDS, so let's make sure the info fits
     u64 RootSignatureCost = 0;
-    RootSignatureCost += Info.mDescriptorTables.Length() * GpuDescriptorTable::cDWordCount;
-    RootSignatureCost += Info.mDescriptors.Length() * GpuRootDescriptor::cDWordCount;
-    RootSignatureCost += Info.mDescriptorConstants.Length() * GpuRootConstant::cDWordCount;
+    RootSignatureCost += tInfo.mDescriptorTables.Length() * GpuDescriptorTable::cDWordCount;
+    RootSignatureCost += tInfo.mDescriptors.Length() * GpuRootDescriptor::cDWordCount;
+    RootSignatureCost += tInfo.mDescriptorConstants.Length() * GpuRootConstant::cDWordCount;
 
     if (RootSignatureCost > GpuRootSignature::cMaxDWordCount)
     {
-#if DEBUG_BUILD
-        if (Info.Name.Length())
+#if CT_DEBUG
+        if (!tInfo.mName.empty())
         {
-            LogFatal("Attempting to create a Root Signature with too many descriptors: %d", RootSignatureCost);
+            ct::console::fatal("Attempting to create a Root Signature with too many descriptors: %d", RootSignatureCost);
         }
         else
 #endif
@@ -71,7 +72,7 @@ GpuRootSignature::GpuRootSignature(const GpuDevice& Device, const GpuRootSignatu
     u32 ParameterCount = 0;
 
     // Collect the descriptor tables
-    for (const auto& Table : Info.mDescriptorTables)
+    for (const auto& Table : tInfo.mDescriptorTables)
     {
         D3D12_ROOT_PARAMETER1& Parameter = RootParameters[Table.mRootIndex];
         Parameter.ParameterType          = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
@@ -93,9 +94,9 @@ GpuRootSignature::GpuRootSignature(const GpuDevice& Device, const GpuRootSignatu
 
             switch (Range.mType)
             {
-                case GpuDescriptorType::Cbv: DescriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV; FoundCSU     = true; break;
-                case GpuDescriptorType::Uav: DescriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV; FoundCSU     = true; break;
-                case GpuDescriptorType::Srv: DescriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV; FoundCSU     = true; break;
+                case GpuDescriptorType::Cbv:     DescriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;     FoundCSU     = true; break;
+                case GpuDescriptorType::Uav:     DescriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;     FoundCSU     = true; break;
+                case GpuDescriptorType::Srv:     DescriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;     FoundCSU     = true; break;
                 case GpuDescriptorType::Sampler: DescriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER; FoundSampler = true; break;
                 default:                           break;
             }
@@ -170,7 +171,7 @@ GpuRootSignature::GpuRootSignature(const GpuDevice& Device, const GpuRootSignatu
     }
 
     // Collect the root (inline) descriptors
-    for (const auto& Descriptor : Info.mDescriptors)
+    for (const auto& Descriptor : tInfo.mDescriptors)
     {
         D3D12_ROOT_PARAMETER1& Parameter = RootParameters[Descriptor.mRootIndex];
         Parameter.ParameterType             = GfxDescriptorTypeToDescriptorParamter(Descriptor.mType);
@@ -207,7 +208,7 @@ GpuRootSignature::GpuRootSignature(const GpuDevice& Device, const GpuRootSignatu
     }
 
     // Collect the root constants
-    for (const auto& Constant : Info.mDescriptorConstants)
+    for (const auto& Constant : tInfo.mDescriptorConstants)
     {
         D3D12_ROOT_PARAMETER1& Parameter = RootParameters[Constant.mRootIndex];
         Parameter.ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
@@ -230,7 +231,7 @@ GpuRootSignature::GpuRootSignature(const GpuDevice& Device, const GpuRootSignatu
     D3D12_FEATURE_DATA_ROOT_SIGNATURE FeatureData = {};
     FeatureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
 
-    if (FAILED(Device.asHandle()->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &FeatureData, sizeof(FeatureData))))
+    if (FAILED(tDevice.asHandle()->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &FeatureData, sizeof(FeatureData))))
     {
         FeatureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
     }
@@ -249,10 +250,11 @@ GpuRootSignature::GpuRootSignature(const GpuDevice& Device, const GpuRootSignatu
     AssertHr(D3D12SerializeVersionedRootSignature(&Desc, &RootSignatureBlob, &ErrorBlob));
 
     // Create the root signature.
-    AssertHr(Device.asHandle()->CreateRootSignature(0, RootSignatureBlob->GetBufferPointer(), RootSignatureBlob->GetBufferSize(), ComCast(&mHandle)));
+    AssertHr(tDevice.asHandle()->CreateRootSignature(0, RootSignatureBlob->GetBufferPointer(), RootSignatureBlob->GetBufferSize(), ComCast(&mHandle)));
 
-#if defined(DEBUG_BUILD)
-    //mHandle->SetName(Info.Name.Ptr()); <- Str8 to Str16 conversion
+#if defined(CT_DEBUG)
+    auto wideName = ct::os::utf8ToUtf16(tInfo.mName);
+    mHandle->SetName(wideName.c_str());
 #endif
 
     mRootParameterCount = ParameterCount;
@@ -266,7 +268,7 @@ GpuRootSignature::getDescriptorTableBitmask(GpuDescriptorType HeapType) const
     {
         case GpuDescriptorType::Srv:     //Intentional Fallthrough
         case GpuDescriptorType::Uav:     //Intentional Fallthrough
-        case GpuDescriptorType::Cbv: Result = mDescriptorTableBitmask; break;
+        case GpuDescriptorType::Cbv:     Result = mDescriptorTableBitmask; break;
         case GpuDescriptorType::Sampler: Result = mSamplerTableBitmask;    break;
     }
     return Result;
