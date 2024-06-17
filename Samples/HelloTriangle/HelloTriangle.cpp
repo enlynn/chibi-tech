@@ -17,14 +17,14 @@ struct VertexDrawConstants
     u32 uMeshDataIndex     = 0;
 };
 
-class HelloTriangleApp : public ct::Game {
+class HelloTextureApp : public ct::Game {
 public:
     [[nodiscard]] ct::GameInfo getGameInfo() const override;
 
     bool onInit(ct::Engine& tEngine) override;
     bool onUpdate(ct::Engine& tEngine) override;
     bool onRender(ct::Engine& tEngine) override;
-    bool onDestroy() override;
+    bool onDestroy(ct::Engine& tEngine) override;
 
     ResourceSystem        mResourceSystem{};
 
@@ -36,17 +36,17 @@ public:
 };
 
 std::unique_ptr<ct::Game> onGameLoad() {
-    return std::make_unique<HelloTriangleApp>();
+    return std::make_unique<HelloTextureApp>();
 }
 
-ct::GameInfo HelloTriangleApp::getGameInfo() const {
+ct::GameInfo HelloTextureApp::getGameInfo() const {
     return {
             .mWindowTitle = "Hello Triangle",
             .mAssetPath   = HelloTriangle_CONTENT_PATH,
     };
 }
 
-bool HelloTriangleApp::onInit(ct::Engine& tEngine) {
+bool HelloTextureApp::onInit(ct::Engine& tEngine) {
     auto gpuState = tEngine.getGpuState();
     auto frameCache = gpuState->getFrameCache();
 
@@ -121,11 +121,11 @@ bool HelloTriangleApp::onInit(ct::Engine& tEngine) {
     return true;
 }
 
-bool HelloTriangleApp::onUpdate(ct::Engine& tEngine) {
+bool HelloTextureApp::onUpdate(ct::Engine& tEngine) {
     return true;
 }
 
-bool HelloTriangleApp::onRender(ct::Engine& tEngine) {
+bool HelloTextureApp::onRender(ct::Engine& tEngine) {
     auto gpuState = tEngine.getGpuState();
 
     gpuState->beginFrame();
@@ -146,7 +146,7 @@ bool HelloTriangleApp::onRender(ct::Engine& tEngine) {
         frameCache->transitionResource(SceneFramebuffer->getResource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
         frameCache->transitionResource(DepthBuffer->getResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
-        f32x4 ClearColor = {0.0f, 0.0f, 0.0f, 1.0f};
+        float4 ClearColor = {0.0f, 0.0f, 0.0f, 1.0f};
         commandList->bindRenderTarget(&renderTarget, &ClearColor, true);
     }
 
@@ -162,7 +162,7 @@ bool HelloTriangleApp::onRender(ct::Engine& tEngine) {
         commandList->setScissorRect(ScissorRect);
     }
 
-    if (true) { // Draw the triangle
+    { // Draw the triangle
         commandList->setPipelineState(mPso);
         commandList->setGraphicsRootSignature(mRootSignature);
 
@@ -196,7 +196,7 @@ bool HelloTriangleApp::onRender(ct::Engine& tEngine) {
     return true;
 }
 
-bool HelloTriangleApp::onDestroy() {
+bool HelloTextureApp::onDestroy(ct::Engine& tEngine) {
     mPso.release();
     mRootSignature.release();
 

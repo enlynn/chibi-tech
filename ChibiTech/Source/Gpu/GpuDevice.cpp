@@ -3,6 +3,7 @@
 #include "GpuDevice.h"
 #include "D3D12Common.h"
 #include "GpuUtils.h"
+#include "GpuResourceViews.h"
 
 #include <Platform/Platform.h>
 #include <Platform/Assert.h>
@@ -241,8 +242,7 @@ GpuDevice::createDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE Type, u32 Count, bool
 	return Result;
 }
 
-GpuResource
-GpuDevice::createCommittedResource(commited_resource_info& Info)
+GpuResource GpuDevice::createCommittedResource(CommitedResourceInfo& Info)
 {
     ID3D12Resource* TempResource = nullptr;
 
@@ -260,3 +260,25 @@ GpuDevice::createCommittedResource(commited_resource_info& Info)
 
     return GpuResource(*this, TempResource);
 }
+
+
+GpuResource GpuDevice::createPlacedResource(const PlacedResourceInfo &tInfo) {
+    ID3D12Resource* tempResource = nullptr;
+
+    AssertHr(mDevice->CreatePlacedResource(tInfo.mHeap, tInfo.mHeapOffset, tInfo.mDesc, tInfo.mInitialState,
+                                           tInfo.mOptimizedClearValue, ComCast(&tempResource)));
+
+    return GpuResource(*this, tempResource);
+}
+
+void GpuDevice::createShaderResourceView(GpuShaderResourceView& tSrv, const D3D12_SHADER_RESOURCE_VIEW_DESC* tDesc) {
+    mDevice->CreateShaderResourceView(tSrv.getResource()->asHandle(), tDesc, tSrv.getDescriptorHandle());
+}
+
+void GpuDevice::createUnorderedAccessView(GpuUnorderedAccessView &tUav, const D3D12_UNORDERED_ACCESS_VIEW_DESC *tDesc) {
+    auto counterResource = tUav.getCounterResource();
+    auto counterHandle = counterResource ? counterResource->asHandle() : nullptr;
+
+    mDevice->CreateUnorderedAccessView(tUav.getResource()->asHandle(), counterHandle, tDesc, tUav.getDescriptorHandle());
+}
+

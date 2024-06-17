@@ -198,8 +198,8 @@ GpuResourceStateTracker::aliasBarrier(const GpuResource* ResourceBefore, const G
 {
     D3D12_RESOURCE_BARRIER Barrier = {};
     Barrier.Type                     = D3D12_RESOURCE_BARRIER_TYPE_ALIASING;
-    Barrier.Aliasing.pResourceBefore = ResourceBefore->asHandle();
-    Barrier.Aliasing.pResourceAfter  = ResourceAfter->asHandle();
+    Barrier.Aliasing.pResourceBefore = ResourceBefore ? ResourceBefore->asHandle() : nullptr;
+    Barrier.Aliasing.pResourceAfter  = ResourceAfter  ? ResourceAfter->asHandle()  : nullptr;
     resourceBarrier(Barrier);
 }
 

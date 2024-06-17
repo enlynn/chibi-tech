@@ -3,6 +3,8 @@
 #include "GpuResource.h"
 #include "GpuDescriptorAllocator.h"
 
+#include <optional>
+
 struct GpuFrameCache;
 
 class GpuTexture
@@ -10,16 +12,18 @@ class GpuTexture
 public:
     GpuTexture() = default;
     GpuTexture(GpuFrameCache* FrameCache, GpuResource Resource);
+    GpuTexture(GpuFrameCache* tFrameCache, const D3D12_RESOURCE_DESC& tDesc, std::optional<D3D12_CLEAR_VALUE> tClearValue = std::nullopt);
 
     void releaseUnsafe(GpuFrameCache* FrameCache);
 
     void resize(GpuFrameCache* FrameCache, u32 Width, u32 Height);
     void createViews(GpuFrameCache* FrameCache);
 
-    D3D12_RESOURCE_DESC getResourceDesc()     const { return mResource.getResourceDesc(); }
-    const GpuResource*  getResource()         const { return &mResource;                  }
-    CpuDescriptor       getRenderTargetView() const { return mRTV;                        }
-    CpuDescriptor       getDepthStencilView() const { return mDSV;                        }
+    D3D12_RESOURCE_DESC getResourceDesc()       const { return mResource.getResourceDesc(); }
+    const GpuResource*  getResource()           const { return &mResource;                  }
+    CpuDescriptor       getRenderTargetView()   const { return mRTV;                        }
+    CpuDescriptor       getDepthStencilView()   const { return mDSV;                        }
+    CpuDescriptor       getShaderResourceView() const { return mSRV;                        }
 
     bool checkSrvSupport()
     {

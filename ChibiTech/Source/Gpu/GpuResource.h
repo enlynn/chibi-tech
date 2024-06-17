@@ -6,6 +6,7 @@
 #include <optional>
 
 class GpuDevice;
+class GpuCommandList;
 
 class GpuResource
 {

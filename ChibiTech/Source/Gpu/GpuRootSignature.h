@@ -75,9 +75,15 @@ enum class GpuDescriptorRangeFlags : u8
     DescriptorConstant,  // Data is Volatile and mDescriptors are constant
 };
 
+enum class GpuDescriptorVisibility : u8 {
+    All,
+    Vertex,
+    Pixel,
+};
+
 struct GpuRootDescriptor
 {
-    u32                     mRootIndex;                                         // Root Parameter Index must be set
+    u32                     mRootIndex;                                      // Root Parameter Index must be set
     GpuDescriptorType       mType           = GpuDescriptorType::Cbv;
     GpuDescriptorRangeFlags mFlags          = GpuDescriptorRangeFlags::None; // Volatile mDescriptors are disallowed for Root mDescriptors
     u32                     mShaderRegister = 0;
@@ -109,6 +115,7 @@ struct GpuDescriptorRange
 struct GpuDescriptorTable
 {
     u32                        mRootIndex; // Root Parameter Index must be set
+    GpuDescriptorVisibility    mVisibility{GpuDescriptorVisibility::All};
     farray<GpuDescriptorRange> mDescriptorRanges = {};
 
     static constexpr u8 cDWordCount = 1;
@@ -116,27 +123,27 @@ struct GpuDescriptorTable
 
 struct GpuStaticSamplerDesc
 {
-    u32                        mShaderRegister   = 0;
-    u32                        mRegisterSpace    = 0;
     D3D12_FILTER               mFilter           = D3D12_FILTER_ANISOTROPIC;
     D3D12_TEXTURE_ADDRESS_MODE mAddressU         = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
     D3D12_TEXTURE_ADDRESS_MODE mAddressV         = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
     D3D12_TEXTURE_ADDRESS_MODE mAddressW         = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-    f32                        mMipLODBias       = 0;
-    u32                        mMaxAnisotropy    = 16;
+    FLOAT                      mMipLODBias       = 0;
+    UINT                       mMaxAnisotropy    = 16;
     D3D12_COMPARISON_FUNC      mComparisonFunc   = D3D12_COMPARISON_FUNC_LESS_EQUAL;
     D3D12_STATIC_BORDER_COLOR  mBorderColor      = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE;
-    f32                        mMinLOD           = 0.0f;
-    f32                        mMaxLOD           = D3D12_FLOAT32_MAX;
+    FLOAT                      mMinLOD           = 0.0f;
+    FLOAT                      mMaxLOD           = D3D12_FLOAT32_MAX;
+    UINT                       mShaderRegister   = 0;
+    UINT                       mRegisterSpace    = 0;
     D3D12_SHADER_VISIBILITY    mShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 };
 
 struct GpuRootSignatureInfo
 {
-    farray<GpuDescriptorTable>   mDescriptorTables    = {};
-    farray<GpuRootDescriptor>    mDescriptors         = {};
-    farray<GpuRootConstant>      mDescriptorConstants = {};
-    farray<GpuStaticSamplerDesc> mStaticSamplers      = {};
+    farray<GpuDescriptorTable>        mDescriptorTables    = {};
+    farray<GpuRootDescriptor>         mDescriptors         = {};
+    farray<GpuRootConstant>           mDescriptorConstants = {};
+    farray<D3D12_STATIC_SAMPLER_DESC> mStaticSamplers      = {}; //TODO: use an abstraction
     // TODO: Static samplers
     std::string                  mName                = {}; // Optional, Set only in debug mode only
 };
@@ -156,20 +163,16 @@ public:
     void release() { if (mHandle) ComSafeRelease(mHandle); }
 
 private:
+    // RootSignature is limited by the number of "bindings" it can have. The upper bound is 64 DWords (64 * 4 bytes).
+    static constexpr u8 cMaxDWordCount = 64;
+
 	struct ID3D12RootSignature* mHandle                     = 0;
     // Total number of root parameters in the root signature
     u32                         mRootParameterCount         = 0;
-    // Need to know number of descriptors per table
-    //  A maximum of 64 descriptor tables are supported
-    u32                         mNumDescriptorsPerTable[64] = {};
-    // A bitmask that represents the root parameter indices that 
-    // are descriptor tables for Samplers
+    // Need to know number of descriptors per table. A maximum of 64 descriptor tables are supported
+    u32                         mNumDescriptorsPerTable[cMaxDWordCount] = {};
+    // A bitmask that represents the root parameter indices that are descriptor tables for Samplers
     u32                         mSamplerTableBitmask        = 0;
-    // A bitmask that represents the root parameter indices
-    // that are CBV/UAV/SRV descriptor tables
+    // A bitmask that represents the root parameter indices that are CBV/UAV/SRV descriptor tables
     u32                         mDescriptorTableBitmask     = 0;
-
-    // RootSignature is limited by the number of "bindings" it can have. The upper
-    // bound is 64 DWords (64 * 4 bytes).
-    static constexpr u8 cMaxDWordCount = 64;
 };

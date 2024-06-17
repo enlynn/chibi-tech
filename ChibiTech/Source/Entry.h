@@ -35,9 +35,9 @@ static void GameEntryPoint()
     }
 
     engine->run(game.get());
-    engine->shutdown();
 
-    game->onDestroy();
+    game->onDestroy(*engine);
+    engine->shutdown();
 }
 
 #ifdef CT_PLATFORM_WINDOWS

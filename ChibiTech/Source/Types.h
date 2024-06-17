@@ -60,3 +60,6 @@ constexpr s64 _1GB   = _GB(1);
 #define ForRangeReverse(Type, VarName, Count) for (Type VarName = (Count) - 1; VarName >= 0;      --VarName)
 
 #define ArrayCount(array)    (sizeof(array) / sizeof(array[0]))
+
+#define MEMORY_ALIGN(val, alignment) (((alignment) + (val) - 1) & ~((alignment) - 1))
+#define DIVIDE_ALIGN(val, align) (((val) + (align) - 1) / (align))

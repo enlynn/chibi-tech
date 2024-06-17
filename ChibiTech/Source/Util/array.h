@@ -5,7 +5,7 @@
 //  TODO(enlynn): Remove this from the project.
 
 // fixed sized array, does not own memory. used for two situations:
-// - Immutable Array, acts as a convienient wrapper around a Ptr and Length
+// - Immutable Array, acts as a convienient wrapper around a Ptr and length
 // - Fixed Sized Array, must free separately with an allocator.
 template<class T>
 class farray

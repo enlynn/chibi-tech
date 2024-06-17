@@ -40,7 +40,7 @@ struct gpu_draw_data
 
 struct gpu_mesh_data
 {
-    f32x44 Transform = {};
+    mat4 Transform = {};
 };
 
 struct gpu_mesh_upload

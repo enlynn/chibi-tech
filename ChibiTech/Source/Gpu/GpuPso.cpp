@@ -630,11 +630,8 @@ GpuGraphicsPsoBuilder& GpuGraphicsPsoBuilder::setTopology(D3D12_PRIMITIVE_TOPOLO
 
 GpuComputePsoBuilder GpuComputePsoBuilder::builder()
 {
-    GpuGraphicsPsoBuilder Result = {};
-
-    Result.mRootSignature = {};
-    ASSERT(false && "GpuComputePsoBuilder::builder Unimplemented");
-    return {};
+    GpuComputePsoBuilder result{};
+    return result;
 }
 
 GpuComputePsoBuilder& GpuComputePsoBuilder::setRootSignature(struct GpuRootSignature *RootSignature)

@@ -40,7 +40,7 @@ void GpuRenderTarget::reset()
 }
 
 D3D12_VIEWPORT
-GpuRenderTarget::getViewport(f32x2 Scale, f32x2 Bias, f32 MinDepth, f32 MaxDepth)
+GpuRenderTarget::getViewport(float2 Scale, float2 Bias, f32 MinDepth, f32 MaxDepth)
 {
     u32 Width  = 1;
     u32 Height = 1;

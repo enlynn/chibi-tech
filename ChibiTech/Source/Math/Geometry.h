@@ -7,9 +7,9 @@
 namespace ct {
     struct GeometryVertex
     {
-        f32x3 mPos;
-        f32x3 mNorm;
-        f32x2 mTex;
+        float3 mPos;
+        float3 mNorm;
+        float2 mTex;
     };
 
     struct GeometryCube

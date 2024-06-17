@@ -4,6 +4,7 @@
 #include "GpuRootSignature.h"
 #include "GpuRenderTarget.h"
 #include "GpuState.h"
+#include "GpuResourceViews.h"
 
 #include <Platform/Assert.h>
 #include <Platform/Console.h>
@@ -117,6 +118,11 @@ void GpuCommandList::reset()
 	{
         mDynamicDescriptors[i].reset();
 	}
+
+    ForRange(int, i, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES)
+    {
+        mBoundDescriptorHeaps[i] = nullptr;
+    }
 
 	mBoundPipeline      = nullptr;
 	mBoundRootSignature = nullptr;
@@ -244,16 +250,6 @@ GpuCommandList::updateSubresources(
 	return RequiredSize;
 }
 
-void GpuCommandList::copyResource(struct GpuFrameCache *FrameCache, const GpuResource* DestinationResource, const GpuResource* SourceResouce)
-{
-    FrameCache->transitionResource(DestinationResource, D3D12_RESOURCE_STATE_COPY_DEST);
-    FrameCache->transitionResource(SourceResouce, D3D12_RESOURCE_STATE_COPY_SOURCE);
-
-    FrameCache->flushResourceBarriers(this);
-
-    mHandle->CopyResource(DestinationResource->asHandle(), SourceResouce->asHandle());
-}
-
 void GpuCommandList::resolveSubresource(struct GpuFrameCache *FrameCache,
                                         const GpuResource* DestinationResource, const GpuResource* SourceResouce,
                                         u32 DestinationSubresource, u32 SourceSubresource)
@@ -321,9 +317,35 @@ void GpuCommandList::setShaderResourceViewInline(u32 RootParameter, GpuResource*
 {
 	if (Buffer)
 	{
-        mDynamicDescriptors[u32(DynamicHeapType::Buffer)].stageInlineSrv(RootParameter,
-                                                                         Buffer->getGpuAddress() + BufferOffset);
+        mDynamicDescriptors[u32(DynamicHeapType::Buffer)].stageInlineSrv(RootParameter, Buffer->getGpuAddress() + BufferOffset);
 	}
+}
+
+
+void GpuCommandList::setShaderResourceView(u32 tRootParameterIndex, u32 tDescriptorOffset, GpuShaderResourceView &tSrv) {
+    stageDynamicDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, tRootParameterIndex, tDescriptorOffset, 1, tSrv.getDescriptorHandle());
+}
+
+void GpuCommandList::setShaderResourceView(u32 tRootParameterIndex, u32 tDescriptorOffset, GpuTexture &tTexture) {
+    stageDynamicDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, tRootParameterIndex, tDescriptorOffset, 1, tTexture.getShaderResourceView().getDescriptorHandle());
+}
+
+void GpuCommandList::setUnorderedAccessView(u32 tRootParameterIndex, u32 tDescriptorOffset, GpuUnorderedAccessView &tUav) {
+    stageDynamicDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, tRootParameterIndex, tDescriptorOffset, 1, tUav.getDescriptorHandle());
+}
+
+void GpuCommandList::stageDynamicDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE tType, u32 tRootParameterIndex, u32 tDescriptorOffset,
+                                             u32 tNumDescriptors, D3D12_CPU_DESCRIPTOR_HANDLE tCpuDescriptorHandle) {
+
+    u32 tIndex = 0;
+    switch (tType) {
+        case D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV: tIndex = u32(DynamicHeapType::Buffer);  break;
+        case D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER:     tIndex = u32(DynamicHeapType::Sampler); break;
+        default:
+            ASSERT_CUSTOM(false, "Invalid Descriptor Heap Type for staging dynamic descriptors."); break;
+    }
+
+    mDynamicDescriptors[tIndex].stageDescriptors(tRootParameterIndex, tDescriptorOffset, tNumDescriptors, tCpuDescriptorHandle);
 }
 
 void GpuCommandList::setGraphicsRootSignature(const GpuRootSignature& RootSignature)
@@ -340,6 +362,21 @@ void GpuCommandList::setGraphicsRootSignature(const GpuRootSignature& RootSignat
 
 		mHandle->SetGraphicsRootSignature(mBoundRootSignature);
 	}
+}
+
+void GpuCommandList::setComputeRootSignature(const GpuRootSignature& RootSignature) {
+    ID3D12RootSignature* RootHandle = RootSignature.asHandle();
+    if (mBoundRootSignature != RootHandle)
+    {
+        mBoundRootSignature = RootHandle;
+
+        ForRange(int, i, u32(DynamicHeapType::Max))
+        {
+            mDynamicDescriptors[i].parseRootSignature(RootSignature);
+        }
+
+        mHandle->SetComputeRootSignature(mBoundRootSignature);
+    }
 }
 
 void
@@ -413,7 +450,7 @@ GpuCommandList::drawIndexedInstanced(u32 IndexCountPerInstance, u32 InstanceCoun
 
 void GpuCommandList::bindRenderTarget(
         struct GpuRenderTarget *RenderTarget,
-        f32x4*             ClearValue,
+        float4*             ClearValue,
         bool               ClearDepthStencil)
 {
     D3D12_CPU_DESCRIPTOR_HANDLE RTHandles[int(AttachmentPoint::Count)];
@@ -464,3 +501,32 @@ void GpuCommandList::bindRenderTarget(
 
     mHandle->OMSetRenderTargets(RTHandlesCount, RTHandles, FALSE, DSViewHandle);
 }
+
+void GpuCommandList::setCompute32BitConstants(u32 tRootParameterIndex, u32 tNumConstants, const void *tConstants) {
+    mHandle->SetComputeRoot32BitConstants(tRootParameterIndex, tNumConstants, tConstants, 0);
+}
+
+void GpuCommandList::dispatch(u32 tNumGroupsX, u32 tNumGroupsY, u32 tNumGroupsZ) {
+    ForRange(int, i, u32(DynamicHeapType::Max)) {
+        mDynamicDescriptors[i].commitStagedDescriptorsForDispatch(this);
+    }
+
+    mHandle->Dispatch(tNumGroupsX, tNumGroupsY, tNumGroupsZ);
+}
+
+
+void GpuCommandList::copyResource(struct GpuFrameCache *FrameCache, const GpuResource* DestinationResource, const GpuResource* SourceResouce)
+{
+    FrameCache->transitionResource(DestinationResource, D3D12_RESOURCE_STATE_COPY_DEST);
+    FrameCache->transitionResource(SourceResouce, D3D12_RESOURCE_STATE_COPY_SOURCE);
+
+    FrameCache->flushResourceBarriers(this);
+
+    copyResource(*DestinationResource, *SourceResouce);
+}
+
+void GpuCommandList::copyResource(const GpuResource &tDstRes, const GpuResource &tSrcRes) {
+    mHandle->CopyResource(tDstRes.asHandle(), tSrcRes.asHandle());
+}
+
+

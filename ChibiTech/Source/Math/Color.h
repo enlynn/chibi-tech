@@ -17,9 +17,9 @@ struct color_rgb
     union
     {
         struct { f32 R, G, B;        };
-        struct { f32x2 RG; f32 Pad0; };
-        struct { f32 Pad1; f32x2 GB; };
-        f32x3 RGB;
+        struct { float2 RG; f32 Pad0; };
+        struct { f32 Pad1; float2 GB; };
+        float3 RGB;
     };
 };
 
@@ -29,9 +29,9 @@ struct color_rgba
     union
     {
         struct { f32 X, Y, Z, W;         };
-        struct { f32x2 XY;   f32x2 ZW;   };
-        struct { f32x3 XYZ;  f32   Pad0; };
-        struct { f32   Pad1; f32x3 YZW;  };
-        f32x4 RGBA;
+        struct { float2 XY;   float2 ZW;   };
+        struct { float3 XYZ;  f32   Pad0; };
+        struct { f32   Pad1; float3 YZW;  };
+        float4 RGBA;
     };
 };

@@ -37,6 +37,17 @@ GfxDescriptorTypeToDescriptorParamter(GpuDescriptorType Type)
     return D3D12_ROOT_PARAMETER_TYPE_CBV;
 }
 
+inline D3D12_SHADER_VISIBILITY toD3D12Visibility(GpuDescriptorVisibility tVisbility) {
+    D3D12_SHADER_VISIBILITY result = D3D12_SHADER_VISIBILITY_ALL;
+    switch (tVisbility) {
+        case GpuDescriptorVisibility::Vertex: result = D3D12_SHADER_VISIBILITY_VERTEX; break;
+        case GpuDescriptorVisibility::Pixel:  result = D3D12_SHADER_VISIBILITY_PIXEL;  break;
+        case GpuDescriptorVisibility::All:    //intentional fallthrough
+        default:                              result = D3D12_SHADER_VISIBILITY_ALL;    break;
+    }
+    return result;
+}
+
 GpuRootSignature::GpuRootSignature(const GpuDevice& tDevice, const GpuRootSignatureInfo& tInfo)
 {
     // A Root Descriptor can have up to 64 DWORDS, so let's make sure the info fits
@@ -76,7 +87,7 @@ GpuRootSignature::GpuRootSignature(const GpuDevice& tDevice, const GpuRootSignat
     {
         D3D12_ROOT_PARAMETER1& Parameter = RootParameters[Table.mRootIndex];
         Parameter.ParameterType          = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-        Parameter.ShaderVisibility       = D3D12_SHADER_VISIBILITY_ALL; // TODO(enlynn): make modifiable
+        Parameter.ShaderVisibility       = toD3D12Visibility(Table.mVisibility); //D3D12_SHADER_VISIBILITY_ALL; // TODO(enlynn): make modifiable
         
         ASSERT(TotalDescriptorRangeCount + Table.mDescriptorRanges.Length() < MaxDescriptorRanges);
 
@@ -146,15 +157,13 @@ GpuRootSignature::GpuRootSignature(const GpuDevice& tDevice, const GpuRootSignat
             ct::console::fatal("Found a descriptor table that contained both CBV/SRV/UAV and a Sampler. This is not allowed.");
         }
         else if (FoundCSU)
-        { // TODO(enlynn):
+        {
             mDescriptorTableBitmask = BitSet(mDescriptorTableBitmask, Table.mRootIndex);
         }
         else if (FoundSampler)
-        {// TODO(enlynn):
-            //_sampler_table_bitmask |= (1 << i); break;
+        {
+            mSamplerTableBitmask = BitSet(mSamplerTableBitmask, Table.mRootIndex);
         }
-
-        // TODO(enlynn): Num mDescriptors in a table.
 
         if (RangeCount > 0)
         {
@@ -220,9 +229,6 @@ GpuRootSignature::GpuRootSignature(const GpuDevice& tDevice, const GpuRootSignat
         ParameterCount += 1;
     }
 
-    // Collect the static samplers
-    // TODO(enlynn): Do it.
-
     //
     // Create the Root Signature
     //
@@ -241,8 +247,8 @@ GpuRootSignature::GpuRootSignature(const GpuDevice& tDevice, const GpuRootSignat
     Desc.Desc_1_1.Flags             = D3D12_ROOT_SIGNATURE_FLAG_NONE; // NOTE(enlynn): Worth denying shader stages?
     Desc.Desc_1_1.NumParameters     = ParameterCount;
     Desc.Desc_1_1.pParameters       = &RootParameters[0];
-    Desc.Desc_1_1.NumStaticSamplers = 0;       //anumStaticSamplers;
-    Desc.Desc_1_1.pStaticSamplers   = nullptr; //apStaticSamplers;
+    Desc.Desc_1_1.NumStaticSamplers = tInfo.mStaticSamplers.Length();
+    Desc.Desc_1_1.pStaticSamplers   = tInfo.mStaticSamplers.Ptr();
 
     // Serialize the root signature.
     ID3DBlob* RootSignatureBlob = nullptr;

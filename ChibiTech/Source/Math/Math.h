@@ -4,13 +4,13 @@
 //------------------------------------------
 // Vector Math
 //
-// f32x2, f32x3, and f32x4 implements the usual math operators (+ - * /).
+// float2, float3, and float4 implements the usual math operators (+ - * /).
 //
-// f32x2 Additions Functions:
+// float2 Additions Functions:
 //
-// f32x3 Additions Functions:
+// float3 Additions Functions:
 //
-// f32x4 Additions Functions:
+// float4 Additions Functions:
 //
 //------------------------------------------
 // Matrix Math
@@ -18,23 +18,23 @@
 // Matrices do not implement the math operator overloads since, I want it to be explicit
 // if the operation is a Left or Right Hand.
 //
-// f32x44 F32x44MulRH(f32x44 Left, f32x44 Right);
-// f32x44 InvertMatrix(f32x44 Matrix);
-// f32x44 ScaleMatrix(f32 ScaleX, f32 ScaleY, f32 ScaleZ);
-// f32x44 TransposeMatrix(f32x44 InMatrix);
-// f32x4 MatrixTranslatePoint(f32x44 Matrix, f32x4 Point);
-// f32x44 TranslateMatrix(f32x3 TranslateVector);
-// f32x44 LookAtMatrixRH(f32x3 EyeVector, f32x3 CenterPoint, f32x3 UpVector);
-// f32x44 PerspectiveMatrixRH(f32 FieldOfView, f32 AspectRatio, f32 NearPlane, f32 FarPlane);
-// f32x44 RotateXMatrix(f32 Theta);
-// f32x44 RotateYMatrix(f32 Theta);
-// f32x44 RotateZMatrix(f32 Theta);
-// f32x44 RotateMatrix(f32 Theta, f32x3 RotationAxis);
+// mat4 mat4MulRH(mat4 Left, mat4 Right);
+// mat4 invertMat4(mat4 Matrix);
+// mat4 scaleMatrix(f32 ScaleX, f32 ScaleY, f32 ScaleZ);
+// mat4 transposeMatrix(mat4 InMatrix);
+// float4 mat4TranslatePoint(mat4 Matrix, float4 Point);
+// mat4 translateMatrix(float3 TranslateVector);
+// mat4 lookAtMatrixRh(float3 EyeVector, float3 CenterPoint, float3 UpVector);
+// mat4 perspectiveMatrixRh(f32 FieldOfView, f32 AspectRatio, f32 NearPlane, f32 FarPlane);
+// mat4 RotateXMatrix(f32 Theta);
+// mat4 RotateYMatrix(f32 Theta);
+// mat4 RotateZMatrix(f32 Theta);
+// mat4 RotateMatrix(f32 Theta, float3 RotationAxis);
 //
 //------------------------------------------
 // Quaternion Math
 //
-// f32x44 QuaternionToRotationMatrix(quaternion Quaternion)
+// mat4 QuaternionToRotationMatrix(quaternion Quaternion)
 //
 //------------------------------------------
 // More Misc. / Geometric Functions
@@ -45,15 +45,15 @@
 // f32   F32RandomClamped(f32 Min, f32 Max)
 // f32   Smoothstep(f32 Point0, f32 Point1, f32 Factor)
 // f32   Smootherstep(f32 Point0, f32 Point1, f32 Factor)
-// f32x3 F32x3ComputeNormal(f32x3 Point0, f32x3 Point1, f32x3 Point2)
-// f32x3 F32x3Random()
-// f32x3 F32x3RandomClamped(f32 Min, f32 Max)
-// f32x3 F32x3RandomInUnitSphere()
-// f32x3 F32x3RandomInHemisphere(f32x3 Normal)
-// f32x3 F32x3RandomUnitVector()
-// f32x3 F32x3RandomInUnitDisc()
-// f32x3 ReflectVector(f32x3 Vector, f32x3 Normal)
-// f32x3 RefractVector(f32x3 IncidentVector, f32x3 Normal, f32 IndicesOfRefraction)
+// float3 F32x3ComputeNormal(float3 Point0, float3 Point1, float3 Point2)
+// float3 F32x3Random()
+// float3 F32x3RandomClamped(f32 Min, f32 Max)
+// float3 F32x3RandomInUnitSphere()
+// float3 F32x3RandomInHemisphere(float3 Normal)
+// float3 F32x3RandomUnitVector()
+// float3 F32x3RandomInUnitDisc()
+// float3 ReflectVector(float3 Vector, float3 Normal)
+// float3 RefractVector(float3 IncidentVector, float3 Normal, f32 IndicesOfRefraction)
 //
 // Approximates the contribution of Fresnel's Factor to Specular Reflected Light
 // f32 SchlickApproximation(f32 Cosine, f32 RefractionIndex)
@@ -72,8 +72,36 @@ constexpr f32 F32_PI      = std::numbers::pi_v<float>;
 constexpr f32 F32_PIDIV2  = F32_PI / 2.0f;
 constexpr f32 F32_2PI     = F32_PI * 2.0f;
 
+struct ubyte2 {
+    union
+    {
+        struct { u8 X, Y; };
+        u8 Ptr[2];
+    };
+};
 
-struct f32x2
+struct ubyte3 {
+    union
+    {
+        struct { u8 X, Y, Z;         };
+        struct { ubyte2 XY; u8 Pad0;  };
+        struct { u8 Pad1; ubyte2 YZ;  };
+        u8 Ptr[3];
+    };
+};
+
+struct ubyte4 {
+    union
+    {
+        struct { u8 X, Y, Z, W;            };
+        struct { ubyte2 XY;   ubyte2 ZW;   };
+        struct { ubyte3 XYZ;  f32    Pad0; };
+        struct { u8     Pad1; ubyte3 YZW;  };
+        u8 Ptr[4];
+    };
+};
+
+struct float2
 {
     union
     {
@@ -81,98 +109,99 @@ struct f32x2
         f32 Ptr[2];
     };
 
-    inline f32    Length();
-    inline f32    LengthSq();
-    inline f32x2& Norm();
+    inline f32    length()   const;
+    inline f32    lengthSq() const;
+    inline float2& norm();
 
-    inline f32x2& operator+=(f32x2 Other);
-    inline f32x2& operator+=(f32   Other);
+    inline float2& operator+=(float2 Other);
+    inline float2& operator+=(f32   Other);
 
-    inline f32x2& operator-=(f32x2 Other);
-    inline f32x2& operator-=(f32   Other);
+    inline float2& operator-=(float2 Other);
+    inline float2& operator-=(f32   Other);
 
-    inline f32x2& operator*=(f32x2 Other);
-    inline f32x2& operator*=(f32   Other);
+    inline float2& operator*=(float2 Other);
+    inline float2& operator*=(f32   Other);
 
-    inline f32x2& operator/=(f32x2 Other);
-    inline f32x2& operator/=(f32   Other);
+    inline float2& operator/=(float2 Other);
+    inline float2& operator/=(f32   Other);
 };
 
-struct f32x3
+struct float3
 {
     union
     {
         struct { f32 X, Y, Z;         };
-        struct { f32x2 XY; f32 Pad0;  };
-        struct { f32 Pad1; f32x2 YZ;  };
+        struct { float2 XY; f32 Pad0;  };
+        struct { f32 Pad1; float2 YZ;  };
         f32 Ptr[3];
     };
 
-    inline f32    Length();
-    inline f32    LengthSq();
-    inline f32x3& Norm();
+    inline f32     length()   const;
+    inline f32     lengthSq() const;
+    inline float3& norm();
+    inline float3  getNorm() const;
 
-    inline f32x3& operator+=(f32x3 Other);
-    inline f32x3& operator+=(f32x2 Other);
-    inline f32x3& operator+=(f32   Other);
+    inline float3& operator+=(float3 Other);
+    inline float3& operator+=(float2 Other);
+    inline float3& operator+=(f32   Other);
 
-    inline f32x3& operator-=(f32x3 Other);
-    inline f32x3& operator-=(f32x2 Other);
-    inline f32x3& operator-=(f32   Other);
+    inline float3& operator-=(float3 Other);
+    inline float3& operator-=(float2 Other);
+    inline float3& operator-=(f32   Other);
 
-    inline f32x3& operator*=(f32x3 Other);
-    inline f32x3& operator*=(f32x2 Other);
-    inline f32x3& operator*=(f32   Other);
+    inline float3& operator*=(float3 Other);
+    inline float3& operator*=(float2 Other);
+    inline float3& operator*=(f32   Other);
 
-    inline f32x3& operator/=(f32x3 Other);
-    inline f32x3& operator/=(f32x2 Other);
-    inline f32x3& operator/=(f32   Other);
+    inline float3& operator/=(float3 Other);
+    inline float3& operator/=(float2 Other);
+    inline float3& operator/=(f32   Other);
 };
 
-struct f32x4
+struct float4
 {
     union
     {
         struct { f32 X, Y, Z, W;         };
-        struct { f32x2 XY;   f32x2 ZW;   };
-        struct { f32x3 XYZ;  f32   Pad0; };
-        struct { f32   Pad1; f32x3 YZW;  };
+        struct { float2 XY;   float2 ZW;   };
+        struct { float3 XYZ;  f32   Pad0; };
+        struct { f32   Pad1; float3 YZW;  };
         f32 Ptr[4];
     };
 
-    inline f32    Length();
-    inline f32    LengthSq();
-    inline f32x4& Norm();
+    inline f32     length()   const;
+    inline f32     lengthSq() const;
+    inline float4& norm();
 
     // The Per-Component Operators only apply to the maximum width of a vector. For example, if you add a
-    // f32x4 and f32x2, then only the XY components are added.
+    // float4 and float2, then only the XY components are added.
 
     // Per Component Add
-    inline f32x4& operator+=(f32x4 Other);
-    inline f32x4& operator+=(f32x3 Other);
-    inline f32x4& operator+=(f32x2 Other);
+    inline float4& operator+=(float4 Other);
+    inline float4& operator+=(float3 Other);
+    inline float4& operator+=(float2 Other);
 
     // Per Component Subtract
-    inline f32x4& operator-=(f32x4 Other);
-    inline f32x4& operator-=(f32x3 Other);
-    inline f32x4& operator-=(f32x2 Other);
+    inline float4& operator-=(float4 Other);
+    inline float4& operator-=(float3 Other);
+    inline float4& operator-=(float2 Other);
 
     // Per Component Multiply
-    inline f32x4& operator*=(f32x4 Other);
-    inline f32x4& operator*=(f32x3 Other);
-    inline f32x4& operator*=(f32x2 Other);
+    inline float4& operator*=(float4 Other);
+    inline float4& operator*=(float3 Other);
+    inline float4& operator*=(float2 Other);
 
     // Divide - this is a little special since this is the one function that can crash a program
     // If a component gets a div-by-zero, the result will be 0.
-    inline f32x4& operator/=(f32x4 Other);
-    inline f32x4& operator/=(f32x3 Other);
-    inline f32x4& operator/=(f32x2 Other);
+    inline float4& operator/=(float4 Other);
+    inline float4& operator/=(float3 Other);
+    inline float4& operator/=(float2 Other);
 
     // The following operators apply to the entire vector.
-    inline f32x4& operator+=(f32 Other);
-    inline f32x4& operator-=(f32 Other);
-    inline f32x4& operator*=(f32 Other);
-    inline f32x4& operator/=(f32 Other);
+    inline float4& operator+=(f32 Other);
+    inline float4& operator-=(f32 Other);
+    inline float4& operator*=(f32 Other);
+    inline float4& operator/=(f32 Other);
 };
 
 struct quaternion
@@ -180,14 +209,14 @@ struct quaternion
     union
     {
         struct { f32 X, Y, Z, Theta; };
-        struct { f32x3 XYZ; f32 Pad0; };
-        f32x4 Ptr;
+        struct { float3 XYZ; f32 Pad0; };
+        float4 Ptr;
     };
 
     quaternion(f32 AxisX, f32 AxisY, f32 AxisZ, f32 Angle)
         : X(AxisX), Y(AxisY), Z(AxisZ), Theta(Angle) {}
 
-    quaternion(f32x3 Axis, f32 Angle) : quaternion(Axis.X, Axis.Y, Axis.Z, Angle)                {}
+    quaternion(float3 Axis, f32 Angle) : quaternion(Axis.X, Axis.Y, Axis.Z, Angle)                {}
     quaternion(f32 Array[4])          : quaternion(Array[0], Array[1], Array[2], Array[3]) {}
 
     quaternion() : quaternion(0.0f, 0.0f, 0.0f, 0.0f) {}
@@ -195,17 +224,17 @@ struct quaternion
     inline quaternion& Norm();
 };
 
-struct f32x44
+struct mat4
 {
     union
     {
-        struct { f32x4 C0, C1, C2, C3; };
+        struct { float4 C0, C1, C2, C3; };
         f32 Ptr[4][4];
     };
 
-    f32x44() : f32x44(1.0f) {}
+    mat4() : mat4(1.0f) {}
 
-    f32x44(f32 Value)
+    mat4(f32 Value)
     {
         C0 = { Value,    0.0f, 0.0f, 0.0f  };
         C1 = { 0.0f, Value,    0.0f, 0.0f  };
@@ -214,34 +243,33 @@ struct f32x44
     }
 };
 
-using vec2 = f32x2;
-using vec3 = f32x3;
-using vec4 = f32x4;
-using mat4 = f32x44;
+using vec2 = float2;
+using vec3 = float3;
+using vec4 = float4;
 
-static constexpr f32x2 f32x2_zero = { .Ptr = { 0, 0               } };
-static constexpr f32x3 f32x3_zero = { .Ptr = { 0, 0, 0        } };
-static constexpr f32x4 f32x4_zero = { .Ptr = { 0, 0, 0, 0 } };
+static constexpr float2 cFloat2Zero = { .Ptr = {0, 0       } };
+static constexpr float3 cFloat3Zero = { .Ptr = {0, 0, 0    } };
+static constexpr float4 cfloat4Zero = { .Ptr = {0, 0, 0, 0 } };
 
-static constexpr f32x2 f32x2_one = { .Ptr = { 1, 1               } };
-static constexpr f32x3 f32x3_one = { .Ptr = { 1, 1, 1        } };
-static constexpr f32x4 f32x4_one = { .Ptr = { 1, 1, 1, 1 } };
+static constexpr float2 cFloat2One = { .Ptr = {1, 1       } };
+static constexpr float3 cFloat3One = { .Ptr = {1, 1, 1    } };
+static constexpr float4 cFloat4One = { .Ptr = {1, 1, 1, 1 } };
 
 //
 // Misc. Functions
 //
 
-inline bool F32IsNan(f32 Value)
+inline bool f32IsNan(f32 Value)
 {
     return std::isnan(Value);
 }
 
-inline bool F32IsInf(f32 Value)
+inline bool f32IsInf(f32 Value)
 {
     return std::isinf(Value);
 }
 
-inline f32 DegreesToRadians(f32 Degrees)
+inline f32 degreesToRadians(f32 Degrees)
 {
     return Degrees * (F32_PI / 180.0f);
 }
@@ -251,161 +279,161 @@ inline f32 DegreesToRadians(f32 Degrees)
 //
 // Source: https://isocpp.org/wiki/faq/newbie#floating-point-arith
 
-// This function is not symmetrical - F32IsEqual(Left, Right) might not always equal F32IsEqual(Right, Left)
+// This function is not symmetrical - F32IsEqual(Left, Right) might not always equal f32IsEqual(Right, Left)
 // TODO(enlynn): properly handle floating point error.
-inline bool F32IsEqual(f32 Left, f32 Right)
+inline bool f32IsEqual(f32 Left, f32 Right)
 {
     return std::abs(Left - Right) <= F32_EPSILON * std::abs(Left);
 }
 
-inline bool F32IsZero(f32 Value)
+inline bool f32IsZero(f32 Value)
 {
-    return F32IsEqual(Value, 0.0f);
+    return f32IsEqual(Value, 0.0f);
 }
 
 // --------------------------------------------------------------------
 
-inline f32 F32FusedMultiplyAdd(f32 A, f32 B, f32 C)
+inline f32 f32FusedMultiplyAdd(f32 A, f32 B, f32 C)
 { // A * B + C
     return std::fma(A, B, C);
 }
 
-inline f32 Lerp(f32 Min, f32 Max, f32 Factor)
+inline f32 lerp(f32 Min, f32 Max, f32 Factor)
 {
-    return F32FusedMultiplyAdd(Factor, Max - Min, Min);
+    return f32FusedMultiplyAdd(Factor, Max - Min, Min);
 }
 
 //
-// Boilerplate Math Operator Overloads: f32x2
+// Boilerplate Math Operator Overloads: float2
 //
 
-inline f32x2& f32x2::operator+=(f32x2 Other)
+inline float2& float2::operator+=(float2 Other)
 {
     X += Other.X;
     Y += Other.Y;
     return *this;
 }
 
-inline f32x2& f32x2::operator+=(f32 Other)
+inline float2& float2::operator+=(f32 Other)
 {
     X += Other;
     Y += Other;
     return *this;
 }
 
-inline f32x2& f32x2::operator-=(f32x2 Other)
+inline float2& float2::operator-=(float2 Other)
 {
     X -= Other.X;
     Y -= Other.Y;
     return *this;
 }
 
-inline f32x2& f32x2::operator-=(f32 Other)
+inline float2& float2::operator-=(f32 Other)
 {
     X -= Other;
     Y -= Other;
     return *this;
 }
 
-inline f32x2& f32x2::operator*=(f32x2 Other)
+inline float2& float2::operator*=(float2 Other)
 {
     X *= Other.X;
     Y *= Other.Y;
     return *this;
 }
 
-inline f32x2& f32x2::operator*=(f32 Other)
+inline float2& float2::operator*=(f32 Other)
 {
     X *= Other;
     Y *= Other;
     return *this;
 }
 
-inline f32x2& f32x2::operator/=(f32x2 Other)
+inline float2& float2::operator/=(float2 Other)
 {
-    X = F32IsZero(Other.X) ? 0.0f : X / Other.X;
-    Y = F32IsZero(Other.Y) ? 0.0f : Y / Other.Y;
+    X = f32IsZero(Other.X) ? 0.0f : X / Other.X;
+    Y = f32IsZero(Other.Y) ? 0.0f : Y / Other.Y;
     return *this;
 }
 
-inline f32x2& f32x2::operator/=(f32 Other)
+inline float2& float2::operator/=(f32 Other)
 {
-    X = F32IsZero(Other) ? 0.0f : X / Other;
-    Y = F32IsZero(Other) ? 0.0f : Y / Other;
+    X = f32IsZero(Other) ? 0.0f : X / Other;
+    Y = f32IsZero(Other) ? 0.0f : Y / Other;
     return *this;
 }
 
-inline f32x2 operator+(f32x2 Left, f32x2 Right)
+inline float2 operator+(float2 Left, float2 Right)
 {
-    f32x2 Result = f32x2_zero;
+    float2 Result = cFloat2Zero;
     Result.X = Left.X + Right.X;
     Result.Y = Left.Y + Right.Y;
     return Result;
 }
 
-inline f32x2 operator+(f32x2 Left, f32 Right)
+inline float2 operator+(float2 Left, f32 Right)
 {
-    f32x2 Result = f32x2_zero;
+    float2 Result = cFloat2Zero;
     Result.X = Left.X + Right;
     Result.Y = Left.Y + Right;
     return Result;
 }
 
-inline f32x2 operator-(f32x2 Left, f32x2 Right)
+inline float2 operator-(float2 Left, float2 Right)
 {
-    f32x2 Result = f32x2_zero;
+    float2 Result = cFloat2Zero;
     Result.X = Left.X - Right.X;
     Result.Y = Left.Y - Right.Y;
     return Result;
 }
 
-inline f32x2 operator-(f32x2 Left, f32 Right)
+inline float2 operator-(float2 Left, f32 Right)
 {
-    f32x2 Result = f32x2_zero;
+    float2 Result = cFloat2Zero;
     Result.X = Left.X - Right;
     Result.Y = Left.Y - Right;
     return Result;
 }
 
-inline f32x2 operator*(f32x2 Left, f32x2 Right)
+inline float2 operator*(float2 Left, float2 Right)
 {
-    f32x2 Result = f32x2_zero;
+    float2 Result = cFloat2Zero;
     Result.X = Left.X * Right.X;
     Result.Y = Left.Y * Right.Y;
     return Result;
 }
 
-inline f32x2 operator*(f32x2 Left, f32 Right)
+inline float2 operator*(float2 Left, f32 Right)
 {
-    f32x2 Result = f32x2_zero;
+    float2 Result = cFloat2Zero;
     Result.X = Left.X * Right;
     Result.Y = Left.Y * Right;
     return Result;
 }
 
-inline f32x2 operator/(f32x2 Left, f32x2 Right)
+inline float2 operator/(float2 Left, float2 Right)
 {
-    f32x2 Result = f32x2_zero;
-    Result.X = F32IsZero(Right.X) ? 0.0f : Left.X / Right.X;
-    Result.Y = F32IsZero(Right.Y) ? 0.0f : Left.Y / Right.Y;
+    float2 Result = cFloat2Zero;
+    Result.X = f32IsZero(Right.X) ? 0.0f : Left.X / Right.X;
+    Result.Y = f32IsZero(Right.Y) ? 0.0f : Left.Y / Right.Y;
     return Result;
 }
 
-inline f32x2 operator/(f32x2 Left, f32 Right)
+inline float2 operator/(float2 Left, f32 Right)
 {
-    f32x2 Result = f32x2_zero;
-    Result.X = F32IsZero(Right) ? 0.0f : Left.X / Right;
-    Result.Y = F32IsZero(Right) ? 0.0f : Left.Y / Right;
+    float2 Result = cFloat2Zero;
+    Result.X = f32IsZero(Right) ? 0.0f : Left.X / Right;
+    Result.Y = f32IsZero(Right) ? 0.0f : Left.Y / Right;
     return Result;
 }
 
-inline f32 f32x2::Length()   { return sqrt(X * X + Y * Y); }
-inline f32 f32x2::LengthSq() { return X * X + Y * Y;          }
+inline f32 float2::length() const   { return sqrt(X * X + Y * Y); }
+inline f32 float2::lengthSq() const { return X * X + Y * Y;          }
 
-inline f32x2& f32x2::Norm()
+inline float2& float2::norm()
 {
-    f32 Len = Length();
-    if (!F32IsZero(Len))
+    f32 Len = length();
+    if (!f32IsZero(Len))
     {
         X /= Len;
         Y /= Len;
@@ -413,16 +441,16 @@ inline f32x2& f32x2::Norm()
     return *this;
 }
 
-inline f32 Dot(f32x2 Left, f32x2 Right)
+inline f32 Dot(float2 Left, float2 Right)
 {
     return Left.X * Right.X + Left.Y * Right.Y;
 }
 
 //
-// Boilerplate Math Operator Overloads: f32x3
+// Boilerplate Math Operator Overloads: float3
 
 
-inline f32x3& f32x3::operator+=(f32x3 Other)
+inline float3& float3::operator+=(float3 Other)
 {
     X += Other.X;
     Y += Other.Y;
@@ -430,14 +458,14 @@ inline f32x3& f32x3::operator+=(f32x3 Other)
     return *this;
 }
 
-inline f32x3& f32x3::operator+=(f32x2 Other)
+inline float3& float3::operator+=(float2 Other)
 {
     X += Other.X;
     Y += Other.Y;
     return *this;
 }
 
-inline f32x3& f32x3::operator+=(f32 Other)
+inline float3& float3::operator+=(f32 Other)
 {
     X += Other;
     Y += Other;
@@ -445,7 +473,7 @@ inline f32x3& f32x3::operator+=(f32 Other)
     return *this;
 }
 
-inline f32x3& f32x3::operator-=(f32x3 Other)
+inline float3& float3::operator-=(float3 Other)
 {
     X -= Other.X;
     Y -= Other.Y;
@@ -453,14 +481,14 @@ inline f32x3& f32x3::operator-=(f32x3 Other)
     return *this;
 }
 
-inline f32x3& f32x3::operator-=(f32x2 Other)
+inline float3& float3::operator-=(float2 Other)
 {
     X -= Other.X;
     Y -= Other.Y;
     return *this;
 }
 
-inline f32x3& f32x3::operator-=(f32   Other)
+inline float3& float3::operator-=(f32   Other)
 {
     X -= Other;
     Y -= Other;
@@ -468,7 +496,7 @@ inline f32x3& f32x3::operator-=(f32   Other)
     return *this;
 }
 
-inline f32x3& f32x3::operator*=(f32x3 Other)
+inline float3& float3::operator*=(float3 Other)
 {
     X *= Other.X;
     Y *= Other.Y;
@@ -476,14 +504,14 @@ inline f32x3& f32x3::operator*=(f32x3 Other)
     return *this;
 }
 
-inline f32x3& f32x3::operator*=(f32x2 Other)
+inline float3& float3::operator*=(float2 Other)
 {
     X *= Other.X;
     Y *= Other.Y;
     return *this;
 }
 
-inline f32x3& f32x3::operator*=(f32 Other)
+inline float3& float3::operator*=(f32 Other)
 {
     X *= Other;
     Y *= Other;
@@ -491,66 +519,66 @@ inline f32x3& f32x3::operator*=(f32 Other)
     return *this;
 }
 
-inline f32x3& f32x3::operator/=(f32x3 Other)
+inline float3& float3::operator/=(float3 Other)
 {
-    X = F32IsZero(Other.X) ? 0.0f : X / Other.X;
-    Y = F32IsZero(Other.Y) ? 0.0f : Y / Other.Y;
-    Z = F32IsZero(Other.Z) ? 0.0f : Z / Other.Z;
+    X = f32IsZero(Other.X) ? 0.0f : X / Other.X;
+    Y = f32IsZero(Other.Y) ? 0.0f : Y / Other.Y;
+    Z = f32IsZero(Other.Z) ? 0.0f : Z / Other.Z;
     return *this;
 }
 
-inline f32x3& f32x3::operator/=(f32x2 Other)
+inline float3& float3::operator/=(float2 Other)
 {
-    X = F32IsZero(Other.X) ? 0.0f : X / Other.X;
-    Y = F32IsZero(Other.Y) ? 0.0f : Y / Other.Y;
+    X = f32IsZero(Other.X) ? 0.0f : X / Other.X;
+    Y = f32IsZero(Other.Y) ? 0.0f : Y / Other.Y;
     return *this;
 }
 
-inline f32x3& f32x3::operator/=(f32 Other)
+inline float3& float3::operator/=(f32 Other)
 {
-    X = F32IsZero(Other) ? 0.0f : X / Other;
-    Y = F32IsZero(Other) ? 0.0f : Y / Other;
-    Z = F32IsZero(Other) ? 0.0f : Z / Other;
+    X = f32IsZero(Other) ? 0.0f : X / Other;
+    Y = f32IsZero(Other) ? 0.0f : Y / Other;
+    Z = f32IsZero(Other) ? 0.0f : Z / Other;
     return *this;
 }
 
-inline f32x3 operator+(f32x3 Left, f32x3 Right)
+inline float3 operator+(float3 Left, float3 Right)
 {
-    f32x3 Result = f32x3_zero;
+    float3 Result = cFloat3Zero;
     Result.X = Left.X + Right.X;
     Result.Y = Left.Y + Right.Y;
     Result.Z = Left.Z + Right.Z;
     return Result;
 }
 
-inline f32x3 operator+(f32x3 Left, f32x2 Right)
+inline float3 operator+(float3 Left, float2 Right)
 {
-    f32x3 Result = f32x3_zero;
+    float3 Result = cFloat3Zero;
     Result.X = Left.X + Right.X;
     Result.Y = Left.Y + Right.Y;
     return Result;
 }
 
-inline f32x3 operator+(f32x2 Left, f32x3 Right)
+inline float3 operator+(float2 Left, float3 Right)
 {
-    f32x3 Result = f32x3_zero;
+    float3 Result = cFloat3Zero;
     Result.X = Left.X + Right.X;
     Result.Y = Left.Y + Right.Y;
     return Result;
 }
 
-inline f32x3 operator+(f32x3 Left, f32 Right)
+inline float3 operator+(float3 Left, f32 Right)
 {
-    f32x3 Result = f32x3_zero;
+    float3 Result = cFloat3Zero;
     Result.X = Left.X + Right;
     Result.Y = Left.Y + Right;
     Result.Z = Left.Z + Right;
     return Result;
 }
 
-inline f32x3 operator+(f32 Left, f32x3 Right)
+inline float3 operator+(f32 Left, float3 Right)
 {
-    f32x3 Result = f32x3_zero;
+    float3 Result = cFloat3Zero;
     Result.X = Left + Right.X;
     Result.Y = Left + Right.Y;
     Result.Z = Left + Right.Z;
@@ -558,43 +586,43 @@ inline f32x3 operator+(f32 Left, f32x3 Right)
 }
 
 // Subtract
-inline f32x3 operator-(f32x3 Left, f32x3 Right)
+inline float3 operator-(float3 Left, float3 Right)
 {
-    f32x3 Result = f32x3_zero;
+    float3 Result = cFloat3Zero;
     Result.X = Left.X - Right.X;
     Result.Y = Left.Y - Right.Y;
     Result.Z = Left.Z - Right.Z;
     return Result;
 }
 
-inline f32x3 operator-(f32x3 Left, f32x2 Right)
+inline float3 operator-(float3 Left, float2 Right)
 {
-    f32x3 Result = f32x3_zero;
+    float3 Result = cFloat3Zero;
     Result.X = Left.X - Right.X;
     Result.Y = Left.Y - Right.Y;
     return Result;
 }
 
-inline f32x3 operator-(f32x2 Left, f32x3 Right)
+inline float3 operator-(float2 Left, float3 Right)
 {
-    f32x3 Result = f32x3_zero;
+    float3 Result = cFloat3Zero;
     Result.X = Left.X - Right.X;
     Result.Y = Left.Y - Right.Y;
     return Result;
 }
 
-inline f32x3 operator-(f32x3 Left, f32 Right)
+inline float3 operator-(float3 Left, f32 Right)
 {
-    f32x3 Result = f32x3_zero;
+    float3 Result = cFloat3Zero;
     Result.X = Left.X - Right;
     Result.Y = Left.Y - Right;
     Result.Z = Left.Z - Right;
     return Result;
 }
 
-inline f32x3 operator-(f32 Left, f32x3 Right)
+inline float3 operator-(f32 Left, float3 Right)
 {
-    f32x3 Result = f32x3_zero;
+    float3 Result = cFloat3Zero;
     Result.X = Left - Right.X;
     Result.Y = Left - Right.Y;
     Result.Z = Left - Right.Z;
@@ -602,43 +630,43 @@ inline f32x3 operator-(f32 Left, f32x3 Right)
 }
 
 // Multiply
-inline f32x3 operator*(f32x3 Left, f32x3 Right)
+inline float3 operator*(float3 Left, float3 Right)
 {
-    f32x3 Result = f32x3_zero;
+    float3 Result = cFloat3Zero;
     Result.X = Left.X * Right.X;
     Result.Y = Left.Y * Right.Y;
     Result.Z = Left.Z * Right.Z;
     return Result;
 }
 
-inline f32x3 operator*(f32x3 Left, f32x2 Right)
+inline float3 operator*(float3 Left, float2 Right)
 {
-    f32x3 Result = f32x3_zero;
+    float3 Result = cFloat3Zero;
     Result.X = Left.X * Right.X;
     Result.Y = Left.Y * Right.Y;
     return Result;
 }
 
-inline f32x3 operator*(f32x2 Left, f32x3 Right)
+inline float3 operator*(float2 Left, float3 Right)
 {
-    f32x3 Result = f32x3_zero;
+    float3 Result = cFloat3Zero;
     Result.X = Left.X * Right.X;
     Result.Y = Left.Y * Right.Y;
     return Result;
 }
 
-inline f32x3 operator*(f32x3 Left, f32 Right)
+inline float3 operator*(float3 Left, f32 Right)
 {
-    f32x3 Result = f32x3_zero;
+    float3 Result = cFloat3Zero;
     Result.X = Left.X * Right;
     Result.Y = Left.Y * Right;
     Result.Z = Left.Z * Right;
     return Result;
 }
 
-inline f32x3 operator*(f32 Left, f32x3 Right)
+inline float3 operator*(f32 Left, float3 Right)
 {
-    f32x3 Result = f32x3_zero;
+    float3 Result = cFloat3Zero;
     Result.X = Left * Right.X;
     Result.Y = Left * Right.Y;
     Result.Z = Left * Right.Z;
@@ -646,47 +674,47 @@ inline f32x3 operator*(f32 Left, f32x3 Right)
 }
 
 // Divide
-inline f32x3 operator/(f32x3 Left, f32x3 Right)
+inline float3 operator/(float3 Left, float3 Right)
 {
-    f32x3 Result = f32x3_zero;
-    Result.X = F32IsZero(Right.X) ? 0.0f : Left.X / Right.X;
-    Result.Y = F32IsZero(Right.Y) ? 0.0f : Left.Y / Right.Y;
-    Result.Z = F32IsZero(Right.Z) ? 0.0f : Left.Z / Right.Z;
+    float3 Result = cFloat3Zero;
+    Result.X = f32IsZero(Right.X) ? 0.0f : Left.X / Right.X;
+    Result.Y = f32IsZero(Right.Y) ? 0.0f : Left.Y / Right.Y;
+    Result.Z = f32IsZero(Right.Z) ? 0.0f : Left.Z / Right.Z;
     return Result;
 }
 
-inline f32x3 operator/(f32x3 Left, f32x2 Right)
+inline float3 operator/(float3 Left, float2 Right)
 {
-    f32x3 Result = f32x3_zero;
-    Result.X = F32IsZero(Right.X) ? 0.0f : Left.X / Right.X;
-    Result.Y = F32IsZero(Right.Y) ? 0.0f : Left.Y / Right.Y;
+    float3 Result = cFloat3Zero;
+    Result.X = f32IsZero(Right.X) ? 0.0f : Left.X / Right.X;
+    Result.Y = f32IsZero(Right.Y) ? 0.0f : Left.Y / Right.Y;
     return Result;
 }
 
-inline f32x3 operator/(f32x2 Left, f32x3 Right)
+inline float3 operator/(float2 Left, float3 Right)
 {
-    f32x3 Result = f32x3_zero;
-    Result.X = F32IsZero(Right.X) ? 0.0f : Left.X / Right.X;
-    Result.Y = F32IsZero(Right.Y) ? 0.0f : Left.Y / Right.Y;
+    float3 Result = cFloat3Zero;
+    Result.X = f32IsZero(Right.X) ? 0.0f : Left.X / Right.X;
+    Result.Y = f32IsZero(Right.Y) ? 0.0f : Left.Y / Right.Y;
     return Result;
 }
 
-inline f32x3 operator/(f32x3 Left, f32 Right)
+inline float3 operator/(float3 Left, f32 Right)
 {
-    f32x3 Result = f32x3_zero;
-    Result.X = F32IsZero(Right) ? 0.0f : Left.X / Right;
-    Result.Y = F32IsZero(Right) ? 0.0f : Left.Y / Right;
-    Result.Z = F32IsZero(Right) ? 0.0f : Left.Z / Right;
+    float3 Result = cFloat3Zero;
+    Result.X = f32IsZero(Right) ? 0.0f : Left.X / Right;
+    Result.Y = f32IsZero(Right) ? 0.0f : Left.Y / Right;
+    Result.Z = f32IsZero(Right) ? 0.0f : Left.Z / Right;
     return Result;
 }
 
-inline f32 f32x3::Length()   { return sqrt(X * X + Y * Y + Z * Z); }
-inline f32 f32x3::LengthSq() { return X * X + Y * Y + Z * Z;          }
+inline f32 float3::length()   const { return sqrt(X * X + Y * Y + Z * Z); }
+inline f32 float3::lengthSq() const { return X * X + Y * Y + Z * Z;          }
 
-inline f32x3& f32x3::Norm()
+inline float3& float3::norm()
 {
-    f32 Len = Length();
-    if (!F32IsZero(Len))
+    f32 Len = length();
+    if (!f32IsZero(Len))
     {
         X /= Len;
         Y /= Len;
@@ -695,19 +723,32 @@ inline f32x3& f32x3::Norm()
     return *this;
 }
 
-inline f32 Dot(f32x3 Left, f32x3 Right)
+inline float3 float3::getNorm() const {
+    f32 Len = length();
+    if (!f32IsZero(Len))
+    {
+        return {
+            .X = X / Len,
+            .Y = Y / Len,
+            .Z = Z / Len,
+        };
+    }
+    return *this;
+}
+
+inline f32 dot(float3 Left, float3 Right)
 {
     return Left.X * Right.X + Left.Y * Right.Y + Left.Z * Right.Z;
 }
 
 //
-// f32x3 Cross(f32x3 Left, f32x3 Right)
+// float3 cross(float3 Left, float3 Right)
 //
 //
 
-inline f32x3 Cross(f32x3 Left, f32x3 Right)
+inline float3 cross(float3 Left, float3 Right)
 {
-    f32x3 Result;
+    float3 Result;
 
     Result.X = (Left.Y * Right.Z) - (Left.Z * Right.Y);
     Result.Y = (Left.Z * Right.X) - (Left.X * Right.Z);
@@ -717,11 +758,11 @@ inline f32x3 Cross(f32x3 Left, f32x3 Right)
 }
 
 //
-// Boilerplate Math Operator Overloads: f32x4
+// Boilerplate Math Operator Overloads: float4
 //
 
 // Per component add-equals
-inline f32x4& f32x4::operator+=(f32x4 Other)
+inline float4& float4::operator+=(float4 Other)
 {
     X += Other.X;
     Y += Other.Y;
@@ -730,7 +771,7 @@ inline f32x4& f32x4::operator+=(f32x4 Other)
     return *this;
 }
 
-inline f32x4& f32x4::operator+=(f32x3 Other)
+inline float4& float4::operator+=(float3 Other)
 {
     X += Other.X;
     Y += Other.Y;
@@ -738,7 +779,7 @@ inline f32x4& f32x4::operator+=(f32x3 Other)
     return *this;
 }
 
-inline f32x4& f32x4::operator+=(f32x2 Other)
+inline float4& float4::operator+=(float2 Other)
 {
     X += Other.X;
     Y += Other.Y;
@@ -746,7 +787,7 @@ inline f32x4& f32x4::operator+=(f32x2 Other)
 }
 
 // Per Component Subtract-equals
-inline f32x4& f32x4::operator-=(f32x4 Other)
+inline float4& float4::operator-=(float4 Other)
 {
     X -= Other.X;
     Y -= Other.Y;
@@ -755,7 +796,7 @@ inline f32x4& f32x4::operator-=(f32x4 Other)
     return *this;
 }
 
-inline f32x4& f32x4::operator-=(f32x3 Other)
+inline float4& float4::operator-=(float3 Other)
 {
     X -= Other.X;
     Y -= Other.Y;
@@ -763,7 +804,7 @@ inline f32x4& f32x4::operator-=(f32x3 Other)
     return *this;
 }
 
-inline f32x4& f32x4::operator-=(f32x2 Other)
+inline float4& float4::operator-=(float2 Other)
 {
     X -= Other.X;
     Y -= Other.Y;
@@ -771,7 +812,7 @@ inline f32x4& f32x4::operator-=(f32x2 Other)
 }
 
 // Per Component Multiply-equals
-inline f32x4& f32x4::operator*=(f32x4 Other)
+inline float4& float4::operator*=(float4 Other)
 {
     X *= Other.X;
     Y *= Other.Y;
@@ -780,7 +821,7 @@ inline f32x4& f32x4::operator*=(f32x4 Other)
     return *this;
 }
 
-inline f32x4& f32x4::operator*=(f32x3 Other)
+inline float4& float4::operator*=(float3 Other)
 {
     X *= Other.X;
     Y *= Other.Y;
@@ -788,7 +829,7 @@ inline f32x4& f32x4::operator*=(f32x3 Other)
     return *this;
 }
 
-inline f32x4& f32x4::operator*=(f32x2 Other)
+inline float4& float4::operator*=(float2 Other)
 {
     X *= Other.X;
     Y *= Other.Y;
@@ -796,29 +837,29 @@ inline f32x4& f32x4::operator*=(f32x2 Other)
 }
 
 // Per Component Multiply-equals
-inline f32x4& f32x4::operator/=(f32x4 Other)
+inline float4& float4::operator/=(float4 Other)
 {
-    X = (F32IsZero(Other.X)) ? 0.0f : X / Other.X;
-    Y = (F32IsZero(Other.Y)) ? 0.0f : Y / Other.Y;
-    Z = (F32IsZero(Other.Z)) ? 0.0f : Z / Other.Z;
-    W = (F32IsZero(Other.W)) ? 0.0f : W / Other.W;
+    X = (f32IsZero(Other.X)) ? 0.0f : X / Other.X;
+    Y = (f32IsZero(Other.Y)) ? 0.0f : Y / Other.Y;
+    Z = (f32IsZero(Other.Z)) ? 0.0f : Z / Other.Z;
+    W = (f32IsZero(Other.W)) ? 0.0f : W / Other.W;
 }
 
-inline f32x4& f32x4::operator/=(f32x3 Other)
+inline float4& float4::operator/=(float3 Other)
 {
-    X = (F32IsZero(Other.X)) ? 0.0f : X / Other.X;
-    Y = (F32IsZero(Other.Y)) ? 0.0f : Y / Other.Y;
-    Z = (F32IsZero(Other.Z)) ? 0.0f : Z / Other.Z;
+    X = (f32IsZero(Other.X)) ? 0.0f : X / Other.X;
+    Y = (f32IsZero(Other.Y)) ? 0.0f : Y / Other.Y;
+    Z = (f32IsZero(Other.Z)) ? 0.0f : Z / Other.Z;
 }
 
-inline f32x4& f32x4::operator/=(f32x2 Other)
+inline float4& float4::operator/=(float2 Other)
 {
-    X = (F32IsZero(Other.X)) ? 0.0f : X / Other.X;
-    Y = (F32IsZero(Other.Y)) ? 0.0f : Y / Other.Y;
+    X = (f32IsZero(Other.X)) ? 0.0f : X / Other.X;
+    Y = (f32IsZero(Other.Y)) ? 0.0f : Y / Other.Y;
 }
 
 // The following operators apply to the entire vector.
-inline f32x4& f32x4::operator+=(f32 Other)
+inline float4& float4::operator+=(f32 Other)
 {
     X += Other;
     Y += Other;
@@ -826,7 +867,7 @@ inline f32x4& f32x4::operator+=(f32 Other)
     W += Other;
 }
 
-inline f32x4& f32x4::operator-=(f32 Other)
+inline float4& float4::operator-=(f32 Other)
 {
     X -= Other;
     Y -= Other;
@@ -834,7 +875,7 @@ inline f32x4& f32x4::operator-=(f32 Other)
     W -= Other;
 }
 
-inline f32x4& f32x4::operator*=(f32 Other)
+inline float4& float4::operator*=(f32 Other)
 {
     X *= Other;
     Y *= Other;
@@ -842,18 +883,18 @@ inline f32x4& f32x4::operator*=(f32 Other)
     W *= Other;
 }
 
-inline f32x4& f32x4::operator/=(f32 Other)
+inline float4& float4::operator/=(f32 Other)
 {
-    X = (F32IsZero(Other)) ? 0.0f : X / Other;
-    Y = (F32IsZero(Other)) ? 0.0f : Y / Other;
-    Z = (F32IsZero(Other)) ? 0.0f : Z / Other;
-    W = (F32IsZero(Other)) ? 0.0f : W / Other;
+    X = (f32IsZero(Other)) ? 0.0f : X / Other;
+    Y = (f32IsZero(Other)) ? 0.0f : Y / Other;
+    Z = (f32IsZero(Other)) ? 0.0f : Z / Other;
+    W = (f32IsZero(Other)) ? 0.0f : W / Other;
 }
 
 // Add Operator
-inline f32x4 operator+(f32x4 Left, f32x4 Right)
+inline float4 operator+(float4 Left, float4 Right)
 {
-    f32x4 Result = f32x4_zero;
+    float4 Result = cfloat4Zero;
 
     Result.X = Left.X + Right.X;
     Result.Y = Left.Y + Right.Y;
@@ -863,9 +904,9 @@ inline f32x4 operator+(f32x4 Left, f32x4 Right)
     return Result;
 }
 
-inline f32x4 operator+(f32x4 Left, f32x3 Right)
+inline float4 operator+(float4 Left, float3 Right)
 {
-    f32x4 Result = f32x4_zero;
+    float4 Result = cfloat4Zero;
 
     Result.X = Left.X + Right.X;
     Result.Y = Left.Y + Right.Y;
@@ -874,9 +915,9 @@ inline f32x4 operator+(f32x4 Left, f32x3 Right)
     return Result;
 }
 
-inline f32x4 operator+(f32x3 Left, f32x4 Right)
+inline float4 operator+(float3 Left, float4 Right)
 {
-    f32x4 Result = f32x4_zero;
+    float4 Result = cfloat4Zero;
 
     Result.X = Left.X + Right.X;
     Result.Y = Left.Y + Right.Y;
@@ -885,9 +926,9 @@ inline f32x4 operator+(f32x3 Left, f32x4 Right)
     return Result;
 }
 
-inline f32x4 operator+(f32x4 Left, f32x2 Right)
+inline float4 operator+(float4 Left, float2 Right)
 {
-    f32x4 Result = f32x4_zero;
+    float4 Result = cfloat4Zero;
 
     Result.X = Left.X + Right.X;
     Result.Y = Left.Y + Right.Y;
@@ -895,9 +936,9 @@ inline f32x4 operator+(f32x4 Left, f32x2 Right)
     return Result;
 }
 
-inline f32x4 operator+(f32x2 Left, f32x4 Right)
+inline float4 operator+(float2 Left, float4 Right)
 {
-    f32x4 Result = f32x4_zero;
+    float4 Result = cfloat4Zero;
 
     Result.X = Left.X + Right.X;
     Result.Y = Left.Y + Right.Y;
@@ -905,9 +946,9 @@ inline f32x4 operator+(f32x2 Left, f32x4 Right)
     return Result;
 }
 
-inline f32x4 operator+(f32x4 Left, f32 Right)
+inline float4 operator+(float4 Left, f32 Right)
 {
-    f32x4 Result = f32x4_zero;
+    float4 Result = cfloat4Zero;
 
     Result.X = Left.X + Right;
     Result.Y = Left.Y + Right;
@@ -918,9 +959,9 @@ inline f32x4 operator+(f32x4 Left, f32 Right)
 }
 
 // Sub Operator
-inline f32x4 operator-(f32x4 Left, f32x4 Right)
+inline float4 operator-(float4 Left, float4 Right)
 {
-    f32x4 Result = f32x4_zero;
+    float4 Result = cfloat4Zero;
 
     Result.X = Left.X - Right.X;
     Result.Y = Left.Y - Right.Y;
@@ -930,9 +971,9 @@ inline f32x4 operator-(f32x4 Left, f32x4 Right)
     return Result;
 }
 
-inline f32x4 operator-(f32x4 Left, f32x3 Right)
+inline float4 operator-(float4 Left, float3 Right)
 {
-    f32x4 Result = f32x4_zero;
+    float4 Result = cfloat4Zero;
 
     Result.X = Left.X - Right.X;
     Result.Y = Left.Y - Right.Y;
@@ -941,9 +982,9 @@ inline f32x4 operator-(f32x4 Left, f32x3 Right)
     return Result;
 }
 
-inline f32x4 operator-(f32x3 Left, f32x4 Right)
+inline float4 operator-(float3 Left, float4 Right)
 {
-    f32x4 Result = f32x4_zero;
+    float4 Result = cfloat4Zero;
 
     Result.X = Left.X - Right.X;
     Result.Y = Left.Y - Right.Y;
@@ -951,9 +992,9 @@ inline f32x4 operator-(f32x3 Left, f32x4 Right)
     return Result;
 }
 
-inline f32x4 operator-(f32x4 Left, f32x2 Right)
+inline float4 operator-(float4 Left, float2 Right)
 {
-    f32x4 Result = f32x4_zero;
+    float4 Result = cfloat4Zero;
 
     Result.X = Left.X - Right.X;
     Result.Y = Left.Y - Right.Y;
@@ -961,9 +1002,9 @@ inline f32x4 operator-(f32x4 Left, f32x2 Right)
     return Result;
 }
 
-inline f32x4 operator-(f32x2 Left, f32x4 Right)
+inline float4 operator-(float2 Left, float4 Right)
 {
-    f32x4 Result = f32x4_zero;
+    float4 Result = cfloat4Zero;
 
     Result.X = Left.X - Right.X;
     Result.Y = Left.Y - Right.Y;
@@ -971,9 +1012,9 @@ inline f32x4 operator-(f32x2 Left, f32x4 Right)
     return Result;
 }
 
-inline f32x4 operator-(f32x4 Left, f32 Right)
+inline float4 operator-(float4 Left, f32 Right)
 {
-    f32x4 Result = f32x4_zero;
+    float4 Result = cfloat4Zero;
 
     Result.X = Left.X - Right;
     Result.Y = Left.Y - Right;
@@ -984,9 +1025,9 @@ inline f32x4 operator-(f32x4 Left, f32 Right)
 }
 
 // Multiplication Operator
-inline f32x4 operator*(f32x4 Left, f32x4 Right)
+inline float4 operator*(float4 Left, float4 Right)
 {
-    f32x4 Result = f32x4_zero;
+    float4 Result = cfloat4Zero;
 
     Result.X = Left.X * Right.X;
     Result.Y = Left.Y * Right.Y;
@@ -996,9 +1037,9 @@ inline f32x4 operator*(f32x4 Left, f32x4 Right)
     return Result;
 }
 
-inline f32x4 operator*(f32x4 Left, f32x3 Right)
+inline float4 operator*(float4 Left, float3 Right)
 {
-    f32x4 Result = f32x4_zero;
+    float4 Result = cfloat4Zero;
 
     Result.X = Left.X * Right.X;
     Result.Y = Left.Y * Right.Y;
@@ -1007,9 +1048,9 @@ inline f32x4 operator*(f32x4 Left, f32x3 Right)
     return Result;
 }
 
-inline f32x4 operator*(f32x3 Left, f32x4 Right)
+inline float4 operator*(float3 Left, float4 Right)
 {
-    f32x4 Result = f32x4_zero;
+    float4 Result = cfloat4Zero;
 
     Result.X = Left.X * Right.X;
     Result.Y = Left.Y * Right.Y;
@@ -1018,9 +1059,9 @@ inline f32x4 operator*(f32x3 Left, f32x4 Right)
     return Result;
 }
 
-inline f32x4 operator*(f32x4 Left, f32x2 Right)
+inline float4 operator*(float4 Left, float2 Right)
 {
-    f32x4 Result = f32x4_zero;
+    float4 Result = cfloat4Zero;
 
     Result.X = Left.X * Right.X;
     Result.Y = Left.Y * Right.Y;
@@ -1028,9 +1069,9 @@ inline f32x4 operator*(f32x4 Left, f32x2 Right)
     return Result;
 }
 
-inline f32x4 operator*(f32x2 Left, f32x4 Right)
+inline float4 operator*(float2 Left, float4 Right)
 {
-    f32x4 Result = f32x4_zero;
+    float4 Result = cfloat4Zero;
 
     Result.X = Left.X * Right.X;
     Result.Y = Left.Y * Right.Y;
@@ -1038,9 +1079,9 @@ inline f32x4 operator*(f32x2 Left, f32x4 Right)
     return Result;
 }
 
-inline f32x4 operator*(f32x4 Left, f32 Right)
+inline float4 operator*(float4 Left, f32 Right)
 {
-    f32x4 Result = f32x4_zero;
+    float4 Result = cfloat4Zero;
 
     Result.X = Left.X * Right;
     Result.Y = Left.Y * Right;
@@ -1051,85 +1092,85 @@ inline f32x4 operator*(f32x4 Left, f32 Right)
 }
 
 // Division Operator
-inline f32x4 operator/(f32x4 Left, f32x4 Right)
+inline float4 operator/(float4 Left, float4 Right)
 {
-    f32x4 Result = f32x4_zero;
+    float4 Result = cfloat4Zero;
 
-    Result.X = F32IsZero(Right.X) ? 0.0f : Left.X / Right.X;
-    Result.Y = F32IsZero(Right.Y) ? 0.0f : Left.Y / Right.Y;
-    Result.Z = F32IsZero(Right.Z) ? 0.0f : Left.Z / Right.Z;
-    Result.W = F32IsZero(Right.W) ? 0.0f : Left.W / Right.W;
+    Result.X = f32IsZero(Right.X) ? 0.0f : Left.X / Right.X;
+    Result.Y = f32IsZero(Right.Y) ? 0.0f : Left.Y / Right.Y;
+    Result.Z = f32IsZero(Right.Z) ? 0.0f : Left.Z / Right.Z;
+    Result.W = f32IsZero(Right.W) ? 0.0f : Left.W / Right.W;
 
     return Result;
 }
 
-inline f32x4 operator/(f32x4 Left, f32x3 Right)
+inline float4 operator/(float4 Left, float3 Right)
 {
-    f32x4 Result = f32x4_zero;
+    float4 Result = cfloat4Zero;
 
-    Result.X = F32IsZero(Right.X) ? 0.0f : Left.X / Right.X;
-    Result.Y = F32IsZero(Right.Y) ? 0.0f : Left.Y / Right.Y;
-    Result.Z = F32IsZero(Right.Z) ? 0.0f : Left.Z / Right.Z;
+    Result.X = f32IsZero(Right.X) ? 0.0f : Left.X / Right.X;
+    Result.Y = f32IsZero(Right.Y) ? 0.0f : Left.Y / Right.Y;
+    Result.Z = f32IsZero(Right.Z) ? 0.0f : Left.Z / Right.Z;
 
     return Result;
 }
 
-inline f32x4 operator/(f32x3 Left, f32x4 Right)
+inline float4 operator/(float3 Left, float4 Right)
 {
-    f32x4 Result = f32x4_zero;
+    float4 Result = cfloat4Zero;
 
-    Result.X = F32IsZero(Right.X) ? 0.0f : Left.X / Right.X;
-    Result.Y = F32IsZero(Right.Y) ? 0.0f : Left.Y / Right.Y;
-    Result.Z = F32IsZero(Right.Z) ? 0.0f : Left.Z / Right.Z;
+    Result.X = f32IsZero(Right.X) ? 0.0f : Left.X / Right.X;
+    Result.Y = f32IsZero(Right.Y) ? 0.0f : Left.Y / Right.Y;
+    Result.Z = f32IsZero(Right.Z) ? 0.0f : Left.Z / Right.Z;
 
     return Result;
 }
 
-inline f32x4 operator/(f32x4 Left, f32x2 Right)
+inline float4 operator/(float4 Left, float2 Right)
 {
-    f32x4 Result = f32x4_zero;
+    float4 Result = cfloat4Zero;
 
-    Result.X = F32IsZero(Right.X) ? 0.0f : Left.X / Right.X;
-    Result.Y = F32IsZero(Right.Y) ? 0.0f : Left.Y / Right.Y;
+    Result.X = f32IsZero(Right.X) ? 0.0f : Left.X / Right.X;
+    Result.Y = f32IsZero(Right.Y) ? 0.0f : Left.Y / Right.Y;
 
     return Result;
 }
 
-inline f32x4 operator/(f32x2 Left, f32x4 Right)
+inline float4 operator/(float2 Left, float4 Right)
 {
-    f32x4 Result = f32x4_zero;
+    float4 Result = cfloat4Zero;
 
-    Result.X = F32IsZero(Right.X) ? 0.0f : Left.X / Right.X;
-    Result.Y = F32IsZero(Right.Y) ? 0.0f : Left.Y / Right.Y;
+    Result.X = f32IsZero(Right.X) ? 0.0f : Left.X / Right.X;
+    Result.Y = f32IsZero(Right.Y) ? 0.0f : Left.Y / Right.Y;
 
     return Result;
 }
 
-inline f32x4 operator/(f32x4 Left, f32 Right)
+inline float4 operator/(float4 Left, f32 Right)
 {
-    f32x4 Result = f32x4_zero;
+    float4 Result = cfloat4Zero;
 
-    Result.X = F32IsZero(Right) ? 0.0f : Left.X / Right;
-    Result.Y = F32IsZero(Right) ? 0.0f : Left.Y / Right;
-    Result.Z = F32IsZero(Right) ? 0.0f : Left.Z / Right;
-    Result.W = F32IsZero(Right) ? 0.0f : Left.W / Right;
+    Result.X = f32IsZero(Right) ? 0.0f : Left.X / Right;
+    Result.Y = f32IsZero(Right) ? 0.0f : Left.Y / Right;
+    Result.Z = f32IsZero(Right) ? 0.0f : Left.Z / Right;
+    Result.W = f32IsZero(Right) ? 0.0f : Left.W / Right;
 
     return Result;
 }
 
-// f32    f32x4::LengthSq()
-// f32    f32x4::Length()
-// f32x4& f32x4::Norm()
-// f32    Dot(f32x4 Left, f32x4 Right)
-// f32x4  Cross(f32x4 Left, f32x4 Right)
+// f32    float4::lengthSq()
+// f32    float4::length()
+// float4& float4::norm()
+// f32    dot(float4 Left, float4 Right)
+// float4  cross(float4 Left, float4 Right)
 
-inline f32 f32x4::Length()   { return sqrt(X * X + Y * Y + Z * Z + W * W); }
-inline f32 f32x4::LengthSq() { return X * X + Y * Y + Z * Z + W * W;          }
+inline f32 float4::length()   const { return sqrt(X * X + Y * Y + Z * Z + W * W); }
+inline f32 float4::lengthSq() const { return X * X + Y * Y + Z * Z + W * W;          }
 
-inline f32x4& f32x4::Norm()
+inline float4& float4::norm()
 {
-    f32 Len = Length();
-    if (!F32IsZero(Len))
+    f32 Len = length();
+    if (!f32IsZero(Len))
     {
         X /= Len;
         Y /= Len;
@@ -1139,57 +1180,57 @@ inline f32x4& f32x4::Norm()
     return *this;
 }
 
-inline f32 Dot(f32x4 Left, f32x4 Right)
+inline f32 dot(float4 Left, float4 Right)
 {
     return Left.X * Right.X + Left.Y * Right.Y + Left.Z * Right.Z + Left.W * Right.W;
 }
 
-inline f32x4 Cross(f32x4 Left, f32x4 Right)
+inline float4 cross(float4 Left, float4 Right)
 {
-    f32x4 Result;
-    Result.XYZ = Cross(Left.XYZ, Right.XYZ);
+    float4 Result;
+    Result.XYZ = cross(Left.XYZ, Right.XYZ);
     Result.W   = 1.0f;
     return Result;
 }
 
 //
-// f32x44 Functions
+// mat4 Functions
 //
 
-inline f32x44 F32x44MulRH(f32x44 Left, f32x44 Right)
+inline mat4 mat4MulRH(mat4 Left, mat4 Right)
 {
-    f32x44 Result;
+    mat4 Result;
 
-    f32x4 lr0 = { Left.Ptr[0][0], Left.Ptr[1][0], Left.Ptr[2][0], Left.Ptr[3][0] };
-    f32x4 lr1 = { Left.Ptr[0][1], Left.Ptr[1][1], Left.Ptr[2][1], Left.Ptr[3][1] };
-    f32x4 lr2 = { Left.Ptr[0][2], Left.Ptr[1][2], Left.Ptr[2][2], Left.Ptr[3][2] };
-    f32x4 lr3 = { Left.Ptr[0][3], Left.Ptr[1][3], Left.Ptr[2][3], Left.Ptr[3][3] };
+    float4 lr0 = {Left.Ptr[0][0], Left.Ptr[1][0], Left.Ptr[2][0], Left.Ptr[3][0] };
+    float4 lr1 = {Left.Ptr[0][1], Left.Ptr[1][1], Left.Ptr[2][1], Left.Ptr[3][1] };
+    float4 lr2 = {Left.Ptr[0][2], Left.Ptr[1][2], Left.Ptr[2][2], Left.Ptr[3][2] };
+    float4 lr3 = {Left.Ptr[0][3], Left.Ptr[1][3], Left.Ptr[2][3], Left.Ptr[3][3] };
 
-    Result.Ptr[0][0] = Dot(lr0, Right.C0);
-    Result.Ptr[0][1] = Dot(lr1, Right.C0);
-    Result.Ptr[0][2] = Dot(lr2, Right.C0);
-    Result.Ptr[0][3] = Dot(lr3, Right.C0);
+    Result.Ptr[0][0] = dot(lr0, Right.C0);
+    Result.Ptr[0][1] = dot(lr1, Right.C0);
+    Result.Ptr[0][2] = dot(lr2, Right.C0);
+    Result.Ptr[0][3] = dot(lr3, Right.C0);
 
-    Result.Ptr[1][0] = Dot(lr0, Right.C1);
-    Result.Ptr[1][1] = Dot(lr1, Right.C1);
-    Result.Ptr[1][2] = Dot(lr2, Right.C1);
-    Result.Ptr[1][3] = Dot(lr3, Right.C1);
+    Result.Ptr[1][0] = dot(lr0, Right.C1);
+    Result.Ptr[1][1] = dot(lr1, Right.C1);
+    Result.Ptr[1][2] = dot(lr2, Right.C1);
+    Result.Ptr[1][3] = dot(lr3, Right.C1);
 
-    Result.Ptr[2][0] = Dot(lr0, Right.C2);
-    Result.Ptr[2][1] = Dot(lr1, Right.C2);
-    Result.Ptr[2][2] = Dot(lr2, Right.C2);
-    Result.Ptr[2][3] = Dot(lr3, Right.C2);
+    Result.Ptr[2][0] = dot(lr0, Right.C2);
+    Result.Ptr[2][1] = dot(lr1, Right.C2);
+    Result.Ptr[2][2] = dot(lr2, Right.C2);
+    Result.Ptr[2][3] = dot(lr3, Right.C2);
 
-    Result.Ptr[3][0] = Dot(lr0, Right.C3);
-    Result.Ptr[3][1] = Dot(lr1, Right.C3);
-    Result.Ptr[3][2] = Dot(lr2, Right.C3);
-    Result.Ptr[3][3] = Dot(lr3, Right.C3);
+    Result.Ptr[3][0] = dot(lr0, Right.C3);
+    Result.Ptr[3][1] = dot(lr1, Right.C3);
+    Result.Ptr[3][2] = dot(lr2, Right.C3);
+    Result.Ptr[3][3] = dot(lr3, Right.C3);
 
     return Result;
 }
 
 // https://gist.github.com/mattatz/86fff4b32d198d0928d0fa4ff32cf6fa
-inline f32x44 InvertMatrix(f32x44 Matrix)
+inline mat4 invertMat4(mat4 Matrix)
 {
     float n11 = Matrix.Ptr[0][0], n12 = Matrix.Ptr[1][0], n13 = Matrix.Ptr[2][0], n14 = Matrix.Ptr[3][0];
     float n21 = Matrix.Ptr[0][1], n22 = Matrix.Ptr[1][1], n23 = Matrix.Ptr[2][1], n24 = Matrix.Ptr[3][1];
@@ -1204,7 +1245,7 @@ inline f32x44 InvertMatrix(f32x44 Matrix)
     float det = n11 * t11 + n21 * t12 + n31 * t13 + n41 * t14;
     float idet = 1.0f / det;
 
-    f32x44 Result = f32x44();
+    mat4 Result = mat4();
 
     Result.Ptr[0][0] = t11 * idet;
     Result.Ptr[0][1] = (n24 * n33 * n41 - n23 * n34 * n41 - n24 * n31 * n43 + n21 * n34 * n43 + n23 * n31 * n44 - n21 * n33 * n44) * idet;
@@ -1230,9 +1271,9 @@ inline f32x44 InvertMatrix(f32x44 Matrix)
 }
 
 // Creates a scaling matrix
-inline f32x44 ScaleMatrix(f32 ScaleX, f32 ScaleY, f32 ScaleZ)
+inline mat4 scaleMatrix(f32 ScaleX, f32 ScaleY, f32 ScaleZ)
 {
-    f32x44 Result = f32x44();
+    mat4 Result = mat4();
 
     Result.Ptr[0][0] = ScaleX;
     Result.Ptr[1][1] = ScaleY;
@@ -1241,9 +1282,9 @@ inline f32x44 ScaleMatrix(f32 ScaleX, f32 ScaleY, f32 ScaleZ)
     return Result;
 }
 
-inline f32x44 TransposeMatrix(f32x44 InMatrix)
+inline mat4 transposeMatrix(mat4 InMatrix)
 {
-    f32x44 Result = f32x44();
+    mat4 Result = mat4();
 
     Result.Ptr[0][0] = InMatrix.Ptr[0][0];
     Result.Ptr[0][1] = InMatrix.Ptr[1][0];
@@ -1268,25 +1309,25 @@ inline f32x44 TransposeMatrix(f32x44 InMatrix)
     return Result;
 }
 
-inline f32x4 MatrixTranslatePoint(f32x44 Matrix, f32x4 Point)
+inline float4 mat4TranslatePoint(mat4 Matrix, float4 Point)
 {
-    f32x4 r0 = { Matrix.Ptr[0][0], Matrix.Ptr[1][0], Matrix.Ptr[2][0], Matrix.Ptr[3][0] };
-    f32x4 r1 = { Matrix.Ptr[0][1], Matrix.Ptr[1][1], Matrix.Ptr[2][1], Matrix.Ptr[3][1] };
-    f32x4 r2 = { Matrix.Ptr[0][2], Matrix.Ptr[1][2], Matrix.Ptr[2][2], Matrix.Ptr[3][2] };
-    f32x4 r3 = { Matrix.Ptr[0][3], Matrix.Ptr[1][3], Matrix.Ptr[2][3], Matrix.Ptr[3][3] };
+    float4 r0 = {Matrix.Ptr[0][0], Matrix.Ptr[1][0], Matrix.Ptr[2][0], Matrix.Ptr[3][0] };
+    float4 r1 = {Matrix.Ptr[0][1], Matrix.Ptr[1][1], Matrix.Ptr[2][1], Matrix.Ptr[3][1] };
+    float4 r2 = {Matrix.Ptr[0][2], Matrix.Ptr[1][2], Matrix.Ptr[2][2], Matrix.Ptr[3][2] };
+    float4 r3 = {Matrix.Ptr[0][3], Matrix.Ptr[1][3], Matrix.Ptr[2][3], Matrix.Ptr[3][3] };
 
-    f32x4 Result = {};
-    Result.X = Dot(Point, r0);
-    Result.Y = Dot(Point, r1);
-    Result.Z = Dot(Point, r2);
-    Result.W = Dot(Point, r3);
+    float4 Result = {};
+    Result.X = dot(Point, r0);
+    Result.Y = dot(Point, r1);
+    Result.Z = dot(Point, r2);
+    Result.W = dot(Point, r3);
     return Result;
 }
 
 // Creates a translation matrix
-inline f32x44 TranslateMatrix(f32x3 TranslateVector)
+inline mat4 translateMatrix(float3 TranslateVector)
 {
-    f32x44 Result = f32x44();
+    mat4 Result = mat4();
 
     Result.Ptr[3][0] = TranslateVector.X;
     Result.Ptr[3][1] = TranslateVector.Y;
@@ -1295,19 +1336,19 @@ inline f32x44 TranslateMatrix(f32x3 TranslateVector)
     return Result;
 }
 
-inline f32x44 LookAtMatrixRH(f32x3 EyePosition, f32x3 EyeLookAtPoint, f32x3 UpVector)
+inline mat4 lookAtMatrixRh(float3 EyePosition, float3 EyeLookAtPoint, float3 UpVector)
 {
-    f32x44 Result = f32x44();
+    mat4 Result = mat4();
 
-    f32x3 f = EyeLookAtPoint - EyePosition;
-    f.Norm();
+    float3 f = EyeLookAtPoint - EyePosition;
+    f.norm();
 
-    UpVector.Norm(); // just to be safe
+    UpVector.norm(); // just to be safe
 
-    f32x3 s = Cross(f, UpVector);
-    s.Norm();
+    float3 s = cross(f, UpVector);
+    s.norm();
 
-    f32x3 u = Cross(s, f);
+    float3 u = cross(s, f);
 
     Result.Ptr[0][0] = s.X;
     Result.Ptr[0][1] = u.X;
@@ -1324,19 +1365,19 @@ inline f32x44 LookAtMatrixRH(f32x3 EyePosition, f32x3 EyeLookAtPoint, f32x3 UpVe
     Result.Ptr[2][2] = -f.Z;
     Result.Ptr[2][3] = 0.0f;
 
-    Result.Ptr[3][0] = -Dot(s, EyePosition);
-    Result.Ptr[3][1] = -Dot(u, EyePosition);
-    Result.Ptr[3][2] = Dot(f, EyePosition);
+    Result.Ptr[3][0] = -dot(s, EyePosition);
+    Result.Ptr[3][1] = -dot(u, EyePosition);
+    Result.Ptr[3][2] = dot(f, EyePosition);
     Result.Ptr[3][3] = 1.0f;
 
     return Result;
 }
 
-inline f32x44 PerspectiveMatrixRH(f32 FieldOfView, f32 AspectRatio, f32 NearPlane, f32 FarPlane)
+inline mat4 perspectiveMatrixRh(f32 FieldOfView, f32 AspectRatio, f32 NearPlane, f32 FarPlane)
 {
-    f32x44 Result = f32x44(0.0f);
+    mat4 Result = mat4(0.0f);
 
-    f32 Radians = DegreesToRadians(FieldOfView);
+    f32 Radians = degreesToRadians(FieldOfView);
     f32 Cotangent = 1.0f / tanf(Radians * 0.5f);
 
     Result.Ptr[0][0] = Cotangent / AspectRatio;
@@ -1349,14 +1390,14 @@ inline f32x44 PerspectiveMatrixRH(f32 FieldOfView, f32 AspectRatio, f32 NearPlan
     return Result;
 }
 
-inline f32x44 RotateXMatrix(f32 Theta)
+inline mat4 RotateXMatrix(f32 Theta)
 {
-    Theta = DegreesToRadians(Theta);
+    Theta = degreesToRadians(Theta);
 
     f32 c = cosf(Theta);
     f32 s = sinf(Theta);
 
-    f32x44 Result;
+    mat4 Result;
 
     Result.Ptr[0][0] = 1.0f;
     Result.Ptr[0][1] = 0.0f;
@@ -1381,14 +1422,14 @@ inline f32x44 RotateXMatrix(f32 Theta)
     return Result;
 }
 
-inline f32x44 RotateYMatrix(f32 Theta)
+inline mat4 RotateYMatrix(f32 Theta)
 {
-    Theta = DegreesToRadians(Theta);
+    Theta = degreesToRadians(Theta);
 
     f32 c = cosf(Theta);
     f32 s = sinf(Theta);
 
-    f32x44 Result;
+    mat4 Result;
 
     Result.Ptr[0][0] = c;
     Result.Ptr[0][1] = 0.0f;
@@ -1413,14 +1454,14 @@ inline f32x44 RotateYMatrix(f32 Theta)
     return Result;
 }
 
-inline f32x44 RotateZMatrix(f32 Theta)
+inline mat4 RotateZMatrix(f32 Theta)
 {
-    Theta = DegreesToRadians(Theta);
+    Theta = degreesToRadians(Theta);
 
     f32 c = cosf(Theta);
     f32 s = sinf(Theta);
 
-    f32x44 Result;
+    mat4 Result;
 
     Result.Ptr[0][0] = c;
     Result.Ptr[0][1] = s;
@@ -1445,10 +1486,10 @@ inline f32x44 RotateZMatrix(f32 Theta)
     return Result;
 }
 
-inline f32x44 RotateMatrix(f32 Theta, f32x3 RotationAxis)
+inline mat4 RotateMatrix(f32 Theta, float3 RotationAxis)
 {
-    Theta = DegreesToRadians(Theta);
-    RotationAxis.Norm();
+    Theta = degreesToRadians(Theta);
+    RotationAxis.norm();
 
     f32 c = cosf(Theta);
     f32 s = sinf(Theta);
@@ -1461,7 +1502,7 @@ inline f32x44 RotateMatrix(f32 Theta, f32x3 RotationAxis)
     f32 axaz = x * RotationAxis.Z;
     f32 ayaz = y * RotationAxis.Z;
 
-    f32x44 Result;
+    mat4 Result;
 
     Result.Ptr[0][0] = c    + x * RotationAxis.X;
     Result.Ptr[0][1] = axay + s * RotationAxis.Z;
@@ -1504,9 +1545,9 @@ inline quaternion& quaternion::Norm()
 
 inline quaternion EulerToQuaternion(f32 Roll, f32 Pitch, f32 Yaw)
 {
-    Roll  = DegreesToRadians(Roll);
-    Pitch = DegreesToRadians(Pitch);
-    Yaw   = DegreesToRadians(Yaw);
+    Roll  = degreesToRadians(Roll);
+    Pitch = degreesToRadians(Pitch);
+    Yaw   = degreesToRadians(Yaw);
 
     f32 cy = cosf(Yaw * 0.5f);
     f32 sy = sinf(Yaw * 0.5f);
@@ -1530,7 +1571,7 @@ inline quaternion EulerToQuaternion(f32 Axis[3])
     return EulerToQuaternion(Axis[0], Axis[1], Axis[2]);
 }
 
-inline f32x44 QuaternionToRotationMatrix(quaternion Quaternion)
+inline mat4 QuaternionToRotationMatrix(quaternion Quaternion)
 {
     f32 X2 = Quaternion.X     * Quaternion.X;
     f32 Y2 = Quaternion.Y     * Quaternion.Y;
@@ -1542,7 +1583,7 @@ inline f32x44 QuaternionToRotationMatrix(quaternion Quaternion)
     f32 WY = Quaternion.Theta * Quaternion.Y;
     f32 WZ = Quaternion.Theta * Quaternion.Z;
 
-    f32x44 Result = {};
+    mat4 Result = {};
 
     // 3x3 Rotation Matrix
     Result.C0 = { 1 - 2.0f * (Y2 + Z2),        2.0f * (XY + WZ),        2.0f * (XZ - WY), 0.0f };
@@ -1562,24 +1603,24 @@ inline f32 F32Clamp(f32 Min, f32 Max, f32 Value)
     return (Value < Min) ? Min : (Value > Max) ? Max : Value;
 }
 
-inline f32 Smoothstep(f32 Point0, f32 Point1, f32 Factor)
+inline f32 smoothstep(f32 Point0, f32 Point1, f32 Factor)
 {
     Factor = F32Clamp(0.0f, 1.0f, (Factor - Point0) / (Point1, - Point0));
     return Factor * Factor * (3 - 2 * Factor);
 }
 
-inline f32 Smootherstep(f32 Point0, f32 Point1, f32 Factor)
+inline f32 smootherstep(f32 Point0, f32 Point1, f32 Factor)
 {
     Factor = F32Clamp(0.0f, 1.0f, (Factor - Point0) / (Point1 - Point0));
     return Factor * Factor * Factor * (Factor * (Factor * 6 - 15) + 10);
 }
 
-inline f32x3 F32x3ComputeNormal(f32x3 Point0, f32x3 Point1, f32x3 Point2)
+inline float3 F32x3ComputeNormal(float3 Point0, float3 Point1, float3 Point2)
 {
-    f32x3 Point10      = Point1 - Point0;
-    f32x3 Point20      = Point2 - Point0;
-    f32x3 NormalVector = Cross(Point10, Point20);
-    return NormalVector.Norm();
+    float3 Point10      = Point1 - Point0;
+    float3 Point20      = Point2 - Point0;
+    float3 NormalVector = cross(Point10, Point20);
+    return NormalVector.norm();
 }
 
 inline f32 F32Random()
@@ -1599,9 +1640,9 @@ inline s32 S32RandomClamped(s32 Min, s32 Max)
 }
 
 
-inline f32x3 F32x3Random()
+inline float3 F32x3Random()
 {
-    f32x3 Result;
+    float3 Result;
 
     Result.X = F32Random();
     Result.Y = F32Random();
@@ -1610,9 +1651,9 @@ inline f32x3 F32x3Random()
     return Result;
 }
 
-inline f32x3 F32x3RandomClamped(f32 Min, f32 Max)
+inline float3 F32x3RandomClamped(f32 Min, f32 Max)
 {
-    f32x3 Result;
+    float3 Result;
 
     Result.X = F32RandomClamped(Min, Max);
     Result.Y = F32RandomClamped(Min, Max);
@@ -1621,20 +1662,20 @@ inline f32x3 F32x3RandomClamped(f32 Min, f32 Max)
     return Result;
 }
 
-inline f32x3 F32x3RandomInUnitSphere()
+inline float3 F32x3RandomInUnitSphere()
 {
     while (true)
     {
-        f32x3 Ran = F32x3RandomClamped(-1.0f, 1.0f);
-        if (Ran.LengthSq() >= 1.0f) continue;
+        float3 Ran = F32x3RandomClamped(-1.0f, 1.0f);
+        if (Ran.lengthSq() >= 1.0f) continue;
         return Ran;
     }
 }
 
-inline f32x3 F32x3RandomInHemisphere(f32x3 Normal)
+inline float3 F32x3RandomInHemisphere(float3 Normal)
 {
-    f32x3 RandomInSphere = F32x3RandomInUnitSphere();
-    if (Dot(RandomInSphere, Normal) > 0.0f)
+    float3 RandomInSphere = F32x3RandomInUnitSphere();
+    if (dot(RandomInSphere, Normal) > 0.0f)
     {
         return RandomInSphere;
     }
@@ -1644,7 +1685,7 @@ inline f32x3 F32x3RandomInHemisphere(f32x3 Normal)
     }
 }
 
-inline f32x3 F32x3RandomUnitVector()
+inline float3 F32x3RandomUnitVector()
 {
     f32 A = F32RandomClamped(0, 2 * F32_PI);
     f32 Z = F32RandomClamped(-1, 1);
@@ -1652,32 +1693,32 @@ inline f32x3 F32x3RandomUnitVector()
     return { R * cosf(A), R * sinf(A), Z };
 }
 
-inline f32x3  F32x3RandomInUnitDisc()
+inline float3  F32x3RandomInUnitDisc()
 {
     while (true)
     {
-        f32x3 Ran = { F32RandomClamped(-1, 1), F32RandomClamped(-1, 1), 0};
-        if (Ran.LengthSq() >= 1.0f) continue;
+        float3 Ran = {F32RandomClamped(-1, 1), F32RandomClamped(-1, 1), 0};
+        if (Ran.lengthSq() >= 1.0f) continue;
         return Ran;
     }
 }
 
 // Assumes the Normal Vector is Normalized.
-inline f32x3 ReflectVector(f32x3 Vector, f32x3 Normal)
+inline float3 ReflectVector(float3 Vector, float3 Normal)
 {
     // ReflectedVector = Vector - 2 * (Vector dot Normal) * Normal
-    f32 CosTheta = Dot(Vector, Normal);
-    f32x3 Result = Vector - 2.0f * CosTheta * Normal;
+    f32 CosTheta = dot(Vector, Normal);
+    float3 Result = Vector - 2.0f * CosTheta * Normal;
 }
 
-inline f32x3 RefractVector(f32x3 IncidentVector, f32x3 Normal, f32 IndicesOfRefraction)
+inline float3 RefractVector(float3 IncidentVector, float3 Normal, f32 IndicesOfRefraction)
 {
     // Flip the incident vector and find the cos(theta) between the Incident and Normal Vectors
-    f32 CosTheta = Dot(IncidentVector * -1.0f, Normal);
+    f32 CosTheta = dot(IncidentVector * -1.0f, Normal);
 
-    f32x3 ScaledNormal        = Normal * CosTheta;
-    f32x3 ParallelVector      = (IncidentVector + ScaledNormal) * IndicesOfRefraction;
-    f32x3 PerpendicularVector = Normal * (-1 * sqrtf(1.0f - ParallelVector.LengthSq()));
+    float3 ScaledNormal        = Normal * CosTheta;
+    float3 ParallelVector      = (IncidentVector + ScaledNormal) * IndicesOfRefraction;
+    float3 PerpendicularVector = Normal * (-1 * sqrtf(1.0f - ParallelVector.lengthSq()));
 
     return ParallelVector + PerpendicularVector;
 }

@@ -19,6 +19,6 @@ namespace ct {
         virtual bool onInit(Engine& tEngine)    { return true; }
         virtual bool onUpdate(Engine& tEngine)  { return true; }
         virtual bool onRender(Engine& tEngine)  { return true; }
-        virtual bool onDestroy()                { return true; }
+        virtual bool onDestroy(Engine& tEngine) { return true; }
     };
 }

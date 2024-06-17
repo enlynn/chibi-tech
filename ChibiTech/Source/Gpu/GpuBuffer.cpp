@@ -17,15 +17,17 @@ GpuBuffer::copyBuffer(struct GpuFrameCache *FrameCache, void* BufferData, u64 Bu
 	}
 	else
 	{
-        commited_resource_info ResourceInfo = {};
+        CommitedResourceInfo ResourceInfo = {};
         ResourceInfo.Size                   = BufferSize;
         Result = Device->createCommittedResource(ResourceInfo);
+
+        Result.asHandle()->SetName(L"Buffer");
 
 		// TODO: Track Resource state.
 
 		if (BufferData != nullptr)
 		{
-            commited_resource_info ResourceInfo = {};
+            CommitedResourceInfo ResourceInfo = {};
             ResourceInfo.HeapType               = D3D12_HEAP_TYPE_UPLOAD;
             ResourceInfo.Size                   = BufferSize;
             ResourceInfo.InitialState           = D3D12_RESOURCE_STATE_GENERIC_READ;
@@ -74,7 +76,7 @@ GpuBuffer::createByteAdressBuffer(struct GpuFrameCache *FrameCache, GpuByteAddre
 	// Not sure if this should be D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER or D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE
 	GpuResource BufferResource = copyBuffer(
             FrameCache, Info.mData, BufferSize, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
-            D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
+            D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE //D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
     );
 
 	GpuBuffer Result = {};
@@ -130,7 +132,7 @@ GpuBuffer GpuBuffer::createStructuredBuffer(GpuFrameCache* FrameCache, GpuStruct
 
     //copyBuffer(FrameCache, nullptr, u64 BufferSize, Flags, InitialBufferState)
 
-    commited_resource_info ResourceInfo = {};
+    CommitedResourceInfo ResourceInfo = {};
     ResourceInfo.Size                   = BufferSize;
     ResourceInfo.HeapType               = D3D12_HEAP_TYPE_UPLOAD;
     ResourceInfo.InitialState           = D3D12_RESOURCE_STATE_GENERIC_READ; // ...is this right?

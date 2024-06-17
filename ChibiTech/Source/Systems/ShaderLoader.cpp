@@ -45,38 +45,7 @@ namespace ct {
 
         ShaderResourceBlob result{nullptr};
 
-        // Try to load the compiled shader
-        //
-
-        std::string compiledFilename = tShaderName.data();
-        if (tStage == ShaderStage::Vertex) {
-            compiledFilename += Extensions::sVertexCompiled;
-        }
-        else if (tStage == ShaderStage::Pixel) {
-            compiledFilename += Extensions::sPixelCompiled;
-        }
-        else if (tStage == ShaderStage::Compute) {
-            compiledFilename += Extensions::sComputeCompiled;
-        }
-
-        // does the file exist?
-        fs::path compiledFilepath = mCompiledShaderDirectory / compiledFilename;
-        if (fs::exists(compiledFilepath))
-        {
-            ct::console::info("Loading compiled shader: %s.", compiledFilename.c_str());
-
-            // cool, it does, so load the compiled shader.
-            auto wideFilepath = compiledFilepath.wstring();
-
-            u32 codePage = CP_UTF8;
-            IDxcBlobEncoding* sourceBlob{nullptr};
-            AssertHr(mDXCLibrary->CreateBlobFromFile(wideFilepath.data(), &codePage, &sourceBlob));
-
-            result = sourceBlob;
-            return result;
-        }
-
-        // Failed to find the compiled shader, so look for the HLSL version and compile it.
+        // Build the Original Filepath
         //
 
         std::string filename = tShaderName.data();
@@ -96,6 +65,48 @@ namespace ct {
             ct::console::error("Failed to find shader file: %s", filepath.c_str());
             return nullptr;
         }
+
+        // Build the Compiled Filepath
+        //
+
+        std::string compiledFilename = tShaderName.data();
+        if (tStage == ShaderStage::Vertex) {
+            compiledFilename += Extensions::sVertexCompiled;
+        }
+        else if (tStage == ShaderStage::Pixel) {
+            compiledFilename += Extensions::sPixelCompiled;
+        }
+        else if (tStage == ShaderStage::Compute) {
+            compiledFilename += Extensions::sComputeCompiled;
+        }
+
+        fs::path compiledFilepath = mCompiledShaderDirectory / compiledFilename;
+
+        // Try to load the compiled shader
+        //
+
+        if (fs::exists(compiledFilepath))
+        {
+            auto originalLastWrite = std::filesystem::last_write_time(filepath);
+            auto compiledLastWrite = std::filesystem::last_write_time(compiledFilepath);
+
+            if (originalLastWrite < compiledLastWrite) {
+                ct::console::info("Loading compiled shader: %s.", compiledFilename.c_str());
+
+                // cool, it does, so load the compiled shader.
+                auto wideFilepath = compiledFilepath.wstring();
+
+                u32 codePage = CP_UTF8;
+                IDxcBlobEncoding* sourceBlob{nullptr};
+                AssertHr(mDXCLibrary->CreateBlobFromFile(wideFilepath.data(), &codePage, &sourceBlob));
+
+                result = sourceBlob;
+                return result;
+            }
+        }
+
+        // Failed to find the compiled shader, so look for the HLSL version and compile it.
+        //
 
         ct::console::info("Compiling shader: %s.", filename.c_str());
 

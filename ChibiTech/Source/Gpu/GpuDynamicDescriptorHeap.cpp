@@ -62,10 +62,11 @@ GpuDynamicDescriptorHeap::GpuDynamicDescriptorHeap(GpuDevice *Device, DynamicHea
 , mDescriptorStride(mDevice->asHandle()->GetDescriptorHandleIncrementSize(mHeapType))
 , mCpuHandleCache(new D3D12_CPU_DESCRIPTOR_HANDLE[mDescriptorsPerHeap])
 , mDescriptorHeapList({})
+, mCurrentHeap(nullptr)
 {
 	switch (Type)
 	{
-		case DynamicHeapType::Buffer: mHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV; break;
+		case DynamicHeapType::Buffer:  mHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV; break;
 		case DynamicHeapType::Sampler: mHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;     break;
 	}
 }
@@ -240,7 +241,7 @@ GpuDynamicDescriptorHeap::commitStagedDescriptorsForDraw(GpuCommandList* Command
 void 
 GpuDynamicDescriptorHeap::commitStagedDescriptorsForDispatch(GpuCommandList* CommandList)
 {
-    commitDescriptorTables(CommandList, &SetRootDescriptorGraphicsWrapper);
+    commitDescriptorTables(CommandList, &SetRootDescriptorComputeWrapper);
     commitInlineDescriptors(CommandList, mInlineCbv, &mStaleCbvBitmask, &SetComputeRootCBVWrapper);
     commitInlineDescriptors(CommandList, mInlineSrv, &mStaleSrvBitmask, &SetComputeRootSRVWrapper);
     commitInlineDescriptors(CommandList, mInlineUav, &mStaleUavBitmask, &SetComputeRootUAVWrapper);

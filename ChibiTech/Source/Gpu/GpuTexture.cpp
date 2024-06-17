@@ -88,6 +88,16 @@ GpuTexture::GpuTexture(GpuFrameCache* FrameCache, GpuResource Resource) : mResou
     createViews(FrameCache);
 }
 
+GpuTexture::GpuTexture(GpuFrameCache *tFrameCache, const D3D12_RESOURCE_DESC &tDesc, std::optional<D3D12_CLEAR_VALUE> tClearValue)
+: mResource(*tFrameCache->getDevice(), tDesc, tClearValue)
+{
+    mResource.asHandle()->SetName(L"Texture2D");
+
+    createViews(tFrameCache);
+    tFrameCache->trackResource(mResource, D3D12_RESOURCE_STATE_COMMON);
+}
+
+
 void
 GpuTexture::resize(GpuFrameCache* FrameCache, u32 Width, u32 Height)
 {
@@ -129,7 +139,7 @@ GpuTexture::createViews(GpuFrameCache* FrameCache)
     // Create RTV
     if ((Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) != 0 && checkRtvSupport())
     {
-         mRTV = FrameCache->mGlobal->mStaticDescriptors[D3D12_DESCRIPTOR_HEAP_TYPE_RTV].allocate();
+        mRTV = FrameCache->mGlobal->mStaticDescriptors[D3D12_DESCRIPTOR_HEAP_TYPE_RTV].allocate();
         Device->asHandle()->CreateRenderTargetView(mResource.asHandle(), nullptr, mRTV.getDescriptorHandle());
     }
 
@@ -141,8 +151,14 @@ GpuTexture::createViews(GpuFrameCache* FrameCache)
 
     if ((Desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) == 0 && checkSrvSupport())
     {
-         mSRV = FrameCache->mGlobal->mStaticDescriptors[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].allocate();
-        Device->asHandle()->CreateShaderResourceView(mResource.asHandle(), nullptr, mSRV.getDescriptorHandle());
+        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+        srvDesc.Format = Desc.Format;
+        srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+        srvDesc.Texture2D.MipLevels = 1;
+
+        mSRV = FrameCache->mGlobal->mStaticDescriptors[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].allocate();
+        Device->asHandle()->CreateShaderResourceView(mResource.asHandle(), &srvDesc, mSRV.getDescriptorHandle());
     }
 
     // Create UAV for each mip (only supported for 1D and 2D textures).

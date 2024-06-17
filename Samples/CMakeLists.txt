@@ -33,6 +33,8 @@ endfunction(BuildSamples)
 set(SAMPLES
         HelloTriangle
         HelloCube
+        HelloTexture
+        CpuRaytracer
 )
 
 BuildSamples()

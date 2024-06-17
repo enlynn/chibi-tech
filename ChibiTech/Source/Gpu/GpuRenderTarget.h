@@ -54,8 +54,8 @@ public:
     // (bias parameter is normalized in the range [0...1]). 
     //
     // By default, fullscreen is return.
-    D3D12_VIEWPORT getViewport(f32x2 Scale = {1.0f, 1.0f},
-                               f32x2 Bias  = {0.0f, 0.0f},
+    D3D12_VIEWPORT getViewport(float2 Scale = {1.0f, 1.0f},
+                               float2 Bias  = {0.0f, 0.0f},
                                f32 MinDepth = 0.0f, f32 MaxDepth = 1.0f);
 
 private:

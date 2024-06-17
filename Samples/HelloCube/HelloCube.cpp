@@ -32,9 +32,9 @@ struct VertexDrawConstants
 
 struct per_mesh_data
 {
-    f32x44 Projection; // Ideally this would go in a "global" constant  buffer. For now, this should be fine.
-    f32x44 View;
-    f32x44 Transforms;     // Rotation-Scale-Translation Ops
+    mat4 Projection; // Ideally this would go in a "global" constant  buffer. For now, this should be fine.
+    mat4 View;
+    mat4 Transforms;     // Rotation-Scale-Translation Ops
 };
 
 // Example Implementation of a renderpass
@@ -74,7 +74,7 @@ public:
     bool onInit(ct::Engine& tEngine) override;
     bool onUpdate(ct::Engine& tEngine) override;
     bool onRender(ct::Engine& tEngine) override;
-    bool onDestroy() override;
+    bool onDestroy(ct::Engine& tEngine) override;
 
     ScenePass            mScenePass{};
     ResolvePass          mResolvePass{};
@@ -140,25 +140,25 @@ bool HelloCubeApp::onUpdate(ct::Engine& tEngine) {
         u32 windowWidth, windowHeight;
         gpuState->mSwapchain->getDimensions(windowWidth, windowHeight);
 
-        f32x44 ProjectionMatrix = PerspectiveMatrixRH(45.0f, (f32)windowWidth / (f32)windowHeight, 0.01f, 100.0f);
-        f32x44 LookAtMatrix     = LookAtMatrixRH({0,0,5}, {0,0,-1}, {0,1,0});
+        mat4 ProjectionMatrix = perspectiveMatrixRh(45.0f, (f32) windowWidth / (f32) windowHeight, 0.01f, 100.0f);
+        mat4 LookAtMatrix     = lookAtMatrixRh({0, 0, 5}, {0, 0, -1}, {0, 1, 0});
 
-        meshData[0].Projection = F32x44MulRH(ProjectionMatrix, LookAtMatrix);
+        meshData[0].Projection = mat4MulRH(ProjectionMatrix, LookAtMatrix);
         meshData[0].View       = {};
 
         static f32 spinnyTheta = 0.0f;
         spinnyTheta += 0.16f;
 
-        f32x3 axis = {1, 1, 0};
+        float3 axis = {1, 1, 0};
 
         quaternion spinnyQuat = {};
         spinnyQuat.XYZ = axis;
         spinnyQuat.Theta = spinnyTheta;
 
-        f32x44 spinnyMatrix      = RotateMatrix(spinnyTheta, {1,1,1});
-        f32x44 translationMatrix = TranslateMatrix({ 0, 0, -2});
+        mat4 spinnyMatrix      = RotateMatrix(spinnyTheta, {1, 1, 1});
+        mat4 translationMatrix = translateMatrix({0, 0, -2});
 
-        meshData[0].Transforms = F32x44MulRH(translationMatrix, spinnyMatrix);
+        meshData[0].Transforms = mat4MulRH(translationMatrix, spinnyMatrix);
 
         mPerObjectData.unmap();
     }
@@ -180,7 +180,7 @@ bool HelloCubeApp::onRender(ct::Engine& tEngine) {
     return true;
 }
 
-bool HelloCubeApp::onDestroy() {
+bool HelloCubeApp::onDestroy(ct::Engine& tEngine) {
     // TODO:
     return true;
 }
@@ -262,7 +262,7 @@ void ScenePass::onRender(struct GpuFrameCache *FrameCache, struct HelloCubeApp *
     FrameCache->transitionResource(SceneFramebuffer->getResource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
     FrameCache->transitionResource(DepthBuffer->getResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
-    f32x4 ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+    float4 ClearColor = {0.0f, 0.0f, 0.0f, 1.0f };
     commandList->bindRenderTarget(&mRenderTarget, &ClearColor, true);
 
     // Scissor / Viewport

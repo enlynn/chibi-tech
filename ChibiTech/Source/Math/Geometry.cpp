@@ -26,15 +26,15 @@ namespace ct {
     GeometryCube makeCube(f32 tSize, bool tShouldReverseWinding, bool tInvertNormals)
     {
         // 8 edges of cube.
-        f32x3 p[8] = {
+        float3 p[8] = {
                 {  tSize, tSize, -tSize }, {  tSize, tSize,  tSize }, {  tSize, -tSize,  tSize }, {  tSize, -tSize, -tSize },
                 { -tSize, tSize,  tSize }, { -tSize, tSize, -tSize }, { -tSize, -tSize, -tSize }, { -tSize, -tSize,  tSize }
         };
 
         // 6 face normals
-        f32x3 n[6] = { { 1, 0, 0 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 }, { 0, 0, 1 }, { 0, 0, -1 } };
+        float3 n[6] = {{1, 0, 0 }, {-1, 0, 0 }, {0, 1, 0 }, {0, -1, 0 }, {0, 0, 1 }, {0, 0, -1 } };
         // 4 unique texture coordinates
-        f32x2 t[4] = { { 0, 0 }, { 1, 0 }, { 1, 1 }, { 0, 1 } };
+        float2 t[4] = {{0, 0 }, {1, 0 }, {1, 1 }, {0, 1 } };
 
         // Indices for the Vertex positions.
         u16 i[24] = {
@@ -119,9 +119,9 @@ namespace ct {
                 dx *= dxz;
                 dz *= dxz;
 
-                f32x3 normal = { dx, dy, dz };
-                f32x2 uv0    = { u, v };
-                f32x3 pos    = normal * tRadius; //v3_mulf(normal, radius);
+                float3 normal = {dx, dy, dz };
+                float2 uv0    = {u, v };
+                float3 pos    = normal * tRadius; //v3_mulf(normal, radius);
 #else
             f32 xSegment = (f32)j / (f32)horizontalSegments;
             f32 ySegment = (f32)i / (f32)verticalSegments;

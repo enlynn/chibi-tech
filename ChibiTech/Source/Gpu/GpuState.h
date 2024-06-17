@@ -35,6 +35,9 @@ struct GpuState
     bool beginFrame();
     bool endFrame();
 
+    CpuDescriptor allocateCpuDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE tDescriptorType, u32 tNumDescriptors = 1);
+    void releaseDescriptors(CpuDescriptor tDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE tDescriptorType);
+
 	u64                        mFrameCount = 0;
 
     // For loader Shader Sources - TODO: probably  remove?
@@ -59,8 +62,9 @@ struct GpuState
 
 struct GpuFrameCache
 {
-	GpuState*                mGlobal = nullptr;
-	std::vector<GpuResource> mStaleResources = {}; // Resources that needs to be freed. Is freed on next use
+	GpuState*                         mGlobal = nullptr;
+	std::vector<GpuResource>          mStaleResources = {}; // Resources that needs to be freed. Is freed on next use
+    std::vector<ID3D12Object*>        mStaleObjects{};
 
 	GpuCommandList*          mGraphicsList = nullptr;
 	GpuCommandList*          mCopyList     = nullptr;
@@ -131,6 +135,7 @@ struct GpuFrameCache
 
     // Add a stale Resource to the queue to be freed eventually
     void addStaleResource(GpuResource Resource)                  { mStaleResources.push_back(Resource); }
+    void addStaleObject(ID3D12Object* tObject)                   { mStaleObjects.push_back(tObject);    }
 
     void trackResource(class GpuResource& Resource, D3D12_RESOURCE_STATES InitialState, UINT SubResource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES) const
     {
@@ -143,20 +148,31 @@ struct GpuFrameCache
     }
 
     // Push a transition Resource barier
-    void transitionResource(const GpuResource*   Resource,
-                            D3D12_RESOURCE_STATES StateAfter,
-                            UINT                  SubResource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
+    void transitionResource(const GpuResource*    tResource,
+                            D3D12_RESOURCE_STATES tStateAfter,
+                            UINT                  tFirstSubResource = 0,
+                            UINT                  tNumSubResources  = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
     {
-        mResourceStateTracker.transitionBarrier(Resource, StateAfter, SubResource);
+        if (tNumSubResources < D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
+        {
+            for (u32 i = 0; i < tNumSubResources; ++i)
+            {
+                mResourceStateTracker.transitionBarrier(tResource, tStateAfter, tFirstSubResource + i);
+            }
+        }
+        else
+        {
+            mResourceStateTracker.transitionBarrier(tResource, tStateAfter);
+        }
     }
 
     // Push a UAV Barrier for a given Resource
     // @param Resource: if null, then any UAV access could require the barrier
-    void uavBarrier(GpuResource* Resource = 0) { mResourceStateTracker.uavBarrier(Resource); }
+    void uavBarrier(const GpuResource* Resource = nullptr) { mResourceStateTracker.uavBarrier(Resource); }
 
     // Push an aliasing barrier for a given Resource.
     // @param: both can be null, which indicates that any placed/reserved Resource could cause aliasing
-    void aliasBarrier(GpuResource* ResourceBefore = 0, GpuResource* ResourceAfter = 0)
+    void aliasBarrier(GpuResource* ResourceBefore = nullptr, GpuResource* ResourceAfter = 0)
     {
         mResourceStateTracker.aliasBarrier(ResourceBefore, ResourceAfter);
     }

@@ -169,11 +169,23 @@ void GpuState::destroy() {
     }
 }
 
+CpuDescriptor GpuState::allocateCpuDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE tDescriptorType, u32 tNumDescriptors) {
+    return mStaticDescriptors[tDescriptorType].allocate(tNumDescriptors);
+}
+
+void GpuState::releaseDescriptors(CpuDescriptor tDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE tDescriptorType) {
+    mStaticDescriptors[tDescriptorType].releaseDescriptors(tDescriptor);
+}
+
 void GpuFrameCache::releaseStateResources() {
     for (GpuResource& Resource : mStaleResources)
     {
         ID3D12Resource* ResourceHandle = Resource.asHandle();
         ComSafeRelease(ResourceHandle);
+    }
+
+    for (auto& object : mStaleObjects) {
+        ComSafeRelease(object);
     }
 
     mStaleResources.clear();

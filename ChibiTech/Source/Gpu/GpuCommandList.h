@@ -15,6 +15,9 @@
 class GpuDevice;
 class GpuResource;
 class GpuPso;
+class GpuShaderResourceView;
+class GpuUnorderedAccessView;
+class GpuTexture;
 
 enum class GpuCommandListType : u8
 {
@@ -52,7 +55,7 @@ public:
 
     void bindRenderTarget(
             struct GpuRenderTarget *RenderTarget,
-            f32x4*                   ClearValue,
+            float4*                   ClearValue,
             bool                     ClearDepthStencil);
 
 	// Texture Handling
@@ -109,6 +112,7 @@ public:
 
     // Frame Cache is required for State Transitions
     void copyResource(struct GpuFrameCache *FrameCache, const GpuResource* DestinationResource, const GpuResource* SourceResouce);
+    void copyResource(const GpuResource& tDstRes, const GpuResource& tSrcRes);
 
     void resolveSubresource(struct GpuFrameCache *FrameCache,          // Frame Cache is required for State Transitions
         const GpuResource* DestinationResource, const GpuResource* SourceResouce,
@@ -127,12 +131,32 @@ public:
 	void setPipelineState(const GpuPso &PipelineState);
 	void setTopology(D3D12_PRIMITIVE_TOPOLOGY Topology);
 
+    // Descriptors
+    void stageDynamicDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE tType, u32 tRootParameterIndex, u32 tDescriptorOffset,
+                                 u32 tNumDescriptors, D3D12_CPU_DESCRIPTOR_HANDLE tCpuDescriptorHandle);
+
+    // Compute
+    void setComputeRootSignature(const GpuRootSignature& RootSignature);
+
+    void setCompute32BitConstants(u32 tRootParameterIndex, u32 tNumConstants, const void* tConstants);
+    template<typename T>
+    void setCompute32BitConstants(u32 tRootParameterIndex, const T& tConstants)
+    {
+        static_assert( sizeof( T ) % sizeof( u32 ) == 0, "Size of type must be a multiple of 4 bytes" );
+        setCompute32BitConstants(tRootParameterIndex, sizeof( T ) / sizeof( u32 ), &tConstants);
+    }
+
 	// Buffer Binding
 	void setIndexBuffer(D3D12_INDEX_BUFFER_VIEW IBView); // TODO(enlynn): Pass in a GpuBuffer
 
 	// Resource View Bindings
 	void setShaderResourceView(u32 RootParameter, u32 DescriptorOffset, CpuDescriptor SRVDescriptor);
 	void setShaderResourceViewInline(u32 RootParameter, GpuResource* Buffer, u64 BufferOffset = 0);
+    void setShaderResourceView(u32 tRootParameterIndex, u32 tDescriptorOffset, GpuShaderResourceView& tSrv);
+    void setShaderResourceView(u32 tRootParameterIndex, u32 tDescriptorOffset, GpuTexture& tTexture);
+
+    // Unordered Access Views
+    void setUnorderedAccessView(u32 tRootParameterIndex, u32 tDescriptorOffset, GpuUnorderedAccessView& tUav);
 
 	void setGraphics32BitConstants(u32 RootParameter, u32 NumConsants, void* Constants);
 	template<typename T> void setGraphics32BitConstants(u32 RootParameter, T* Constants)
@@ -144,6 +168,9 @@ public:
 	void drawInstanced(u32 VertexCountPerInstance, u32 InstanceCount = 1, u32 StartVertexLocation = 0, u32 StartInstanceLocation = 0);
 	void drawIndexedInstanced(u32 IndexCountPerInstance, u32 InstanceCount = 1, u32 StartIndexLocation = 0, u32 StartVertexLocation = 0, u32 StartInstanceLocation = 0);
 
+    // Compute Draw Commands
+    void dispatch(u32 tNumGroupsX, u32 tNumGroupsY = 1, u32 tNumGroupsZ = 1);
+
 private:
 	GpuCommandListType                mType                                                       = GpuCommandListType::None;
 	struct ID3D12GraphicsCommandList* mHandle                                                     = nullptr;
@@ -152,7 +179,7 @@ private:
 	GpuDevice*                        mDevice                                                     = nullptr;
 
 	ID3D12DescriptorHeap*             mBoundDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES] = {};
-	GpuDynamicDescriptorHeap          mDynamicDescriptors[u32(DynamicHeapType::Max)]            = {};
+	GpuDynamicDescriptorHeap          mDynamicDescriptors[u32(DynamicHeapType::Max)]              = {};
 
 	ID3D12PipelineState*              mBoundPipeline                                              = nullptr;
 	ID3D12RootSignature*              mBoundRootSignature                                         = nullptr;
