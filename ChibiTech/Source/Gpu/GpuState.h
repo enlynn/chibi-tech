@@ -4,7 +4,7 @@
 #include "GpuDevice.h"
 #include "GpuResource.h"
 #include "GpuCommandList.h"
-#include "GpuCommandQueue.h"
+#include "GpuQueue.h"
 #include "GpuSwapchain.h"
 #include "GpuBuffer.h"
 #include "GpuRootSignature.h"
@@ -46,9 +46,9 @@ struct GpuState
 	std::unique_ptr<GpuDevice>     mDevice{nullptr};
     std::unique_ptr<GpuSwapchain>  mSwapchain{nullptr};
 
-    std::unique_ptr<GpuCommandQueue> mGraphicsQueue{nullptr};
-    std::unique_ptr<GpuCommandQueue> mComputeQueue{nullptr};
-    std::unique_ptr<GpuCommandQueue> mCopyQueue{nullptr};
+    std::unique_ptr<GpuQueue> mGraphicsQueue{nullptr};
+    std::unique_ptr<GpuQueue> mComputeQueue{nullptr};
+    std::unique_ptr<GpuQueue> mCopyQueue{nullptr};
 
 	std::array<CpuDescriptorAllocator, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES> mStaticDescriptors;  // Global descriptors, long lived
 

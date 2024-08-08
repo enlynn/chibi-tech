@@ -61,5 +61,4 @@ private:
 
 	void enableDebugDevice();
 	void selectAdapter();
-
 };

@@ -25,12 +25,12 @@ enum class GpuFenceResult
 	success,
 };
 
-class GpuCommandQueue
+class GpuQueue
 {
 public:
-	GpuCommandQueue() = default;
-	GpuCommandQueue(GpuCommandQueueType Type, GpuDevice *Device);
-	~GpuCommandQueue() { deinit(); }
+	GpuQueue() = default;
+	GpuQueue(GpuCommandQueueType Type, GpuDevice *Device);
+	~GpuQueue() { deinit(); }
 
 	inline ID3D12CommandQueue* asHandle() const { return mQueueHandle; }
 
@@ -49,7 +49,7 @@ public:
 	u64               signal();                                  // (nonblocking) signals the fence and returns its current value
 	bool              isFenceComplete(u64 FenceValue);           // (nonblocking) check the currnt value of a fence
 	GpuFenceResult    waitForFence(u64 FenceValue);              // (blocking)    wait for a fence to have passed value
-	void              wait(const GpuCommandQueue* OtherQueue);   // (blocking)    wait for another command queue to finish executing
+	void              wait(const GpuQueue* OtherQueue);   // (blocking)    wait for another command queue to finish executing
 
 private:
 	GpuDevice*               mDevice       = nullptr;

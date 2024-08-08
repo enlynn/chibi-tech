@@ -1,5 +1,5 @@
 #include "D3D12Common.h"
-#include "GpuCommandQueue.h"
+#include "GpuQueue.h"
 #include "GpuDevice.h"
 
 #include <Platform/Assert.h>
@@ -29,7 +29,7 @@ D3D12_COMMAND_LIST_TYPE_NONE
 	}
 }
 
-GpuCommandQueue::GpuCommandQueue(GpuCommandQueueType Type, GpuDevice *Device)
+GpuQueue::GpuQueue(GpuCommandQueueType Type, GpuDevice *Device)
 	: mDevice(Device)
 	, mType(Type)
 	, mFenceValue(0)
@@ -50,7 +50,7 @@ GpuCommandQueue::GpuCommandQueue(GpuCommandQueueType Type, GpuDevice *Device)
 }
 
 void 
-GpuCommandQueue::deinit()
+GpuQueue::deinit()
 {
 	if (!mQueueHandle || !mQueueFence) return; // nothing to deinit
 
@@ -79,7 +79,7 @@ GpuCommandQueue::deinit()
 	mDevice = nullptr;
 }
 
-void GpuCommandQueue::flush()
+void GpuQueue::flush()
 {
 	do
 	{
@@ -90,7 +90,7 @@ void GpuCommandQueue::flush()
 }
 
 GpuCommandList*
-GpuCommandQueue::getCommandList(GpuCommandListType Type)
+GpuQueue::getCommandList(GpuCommandListType Type)
 {
 	ASSERT(Type != GpuCommandListType::None);
 	u32 TypeIndex = u32(Type);
@@ -110,7 +110,7 @@ GpuCommandQueue::getCommandList(GpuCommandListType Type)
 }
 
 u64               
-GpuCommandQueue::executeCommandLists(farray<GpuCommandList*> CommandLists)
+GpuQueue::executeCommandLists(farray<GpuCommandList*> CommandLists)
 {
 	// TODO(enlynn): Originally...I had to submit a copy for every command list
 	// in order to correctly resolve Resource state. This time around, I would
@@ -147,14 +147,14 @@ GpuCommandQueue::executeCommandLists(farray<GpuCommandList*> CommandLists)
 	return NextFenceValue;
 }
 
-void GpuCommandQueue::submitEmptyCommandList(GpuCommandList* CommandList)
+void GpuQueue::submitEmptyCommandList(GpuCommandList* CommandList)
 {
     CommandList->close();
     mAvailableFlightCommandLists[u32(CommandList->getType())].push_back(CommandList);
 }
 
 void              
-GpuCommandQueue::processCommandLists()
+GpuQueue::processCommandLists()
 {
     int iterations = 0;
     GpuCommandList* OldList = nullptr;
@@ -173,7 +173,7 @@ GpuCommandQueue::processCommandLists()
 }
 
 u64 
-GpuCommandQueue::signal()
+GpuQueue::signal()
 {
 	mFenceValue += 1;
 	AssertHr(mQueueHandle->Signal(mQueueFence, mFenceValue));
@@ -181,13 +181,13 @@ GpuCommandQueue::signal()
 }
 
 bool           
-GpuCommandQueue::isFenceComplete(u64 FenceValue)
+GpuQueue::isFenceComplete(u64 FenceValue)
 {
 	return mQueueFence->GetCompletedValue() >= FenceValue;
 }
 
 GpuFenceResult
-GpuCommandQueue::waitForFence(u64 FenceValue)
+GpuQueue::waitForFence(u64 FenceValue)
 {
 	if (mQueueFence->GetCompletedValue() < FenceValue)
 	{
@@ -203,7 +203,7 @@ GpuCommandQueue::waitForFence(u64 FenceValue)
 }
 
 void             
-GpuCommandQueue::wait(const GpuCommandQueue* OtherQueue)
+GpuQueue::wait(const GpuQueue* OtherQueue)
 {
 	mQueueHandle->Wait(OtherQueue->mQueueFence, OtherQueue->mFenceValue);
 }

@@ -10,7 +10,7 @@ class YourClassName {};
 Functions and Variables are camelCase:
 ```c++
 void myFunction() {
-    int mVariable = 1;
+    int myVariable = 1;
 }
 ```
 
@@ -83,7 +83,7 @@ void MyClass::borrow(const int* tpMyPtr) {
 ```c++
 using MyTypeUnique = std::unique_ptr<MyType>;
 using MyTypeShared = std::shared_ptr<MyType>;
-using MyTypeWeak = std::weak_ptr<MyType>;
+using MyTypeWeak   = std::weak_ptr<MyType>;
 ```
 - Prefer unique pointers over shared pointers.
 

@@ -1,6 +1,6 @@
 #include "GpuSwapchain.h"
 #include "GpuDevice.h"
-#include "GpuCommandQueue.h"
+#include "GpuQueue.h"
 #include "GpuState.h"
 
 #include <Platform/Console.h>

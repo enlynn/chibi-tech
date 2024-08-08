@@ -67,9 +67,9 @@ GpuState::GpuState(const ct::os::Window& tWindow) {
     mDevice = std::make_unique<GpuDevice>();
     mDevice->init();
 
-    mGraphicsQueue = std::make_unique<GpuCommandQueue>(GpuCommandQueueType::Graphics, mDevice.get());
-    mCopyQueue     = std::make_unique<GpuCommandQueue>(GpuCommandQueueType::Copy, mDevice.get());
-    mComputeQueue  = std::make_unique<GpuCommandQueue>(GpuCommandQueueType::Compute, mDevice.get());
+    mGraphicsQueue = std::make_unique<GpuQueue>(GpuCommandQueueType::Graphics, mDevice.get());
+    mCopyQueue     = std::make_unique<GpuQueue>(GpuCommandQueueType::Copy, mDevice.get());
+    mComputeQueue  = std::make_unique<GpuQueue>(GpuCommandQueueType::Compute, mDevice.get());
 
     mGlobalResourceState = std::make_unique<GpuGlobalResourceState>();
     mGlobalResourceState->mKnownStates.reserve(10);

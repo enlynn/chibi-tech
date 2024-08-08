@@ -11,7 +11,7 @@
 
 class platform_window;
 class GpuDevice;
-class GpuCommandQueue;
+class GpuQueue;
 
 struct GpuFrameCache;
 
@@ -23,7 +23,7 @@ struct GpuSwapchainInfo
 {
 	// Required to set.
 	GpuDevice*               mDevice                    = nullptr;
-	GpuCommandQueue*         mPresentQueue              = nullptr;
+	GpuQueue*         mPresentQueue              = nullptr;
 	CpuDescriptorAllocator*  mRenderTargetDesciptorHeap = nullptr;
 	// Optional settings
 	u32                      mBackbufferCount      = 2;                          // TODO(enlynn): Determine the correct number of backbuffers
