@@ -27,11 +27,15 @@ struct PlacedResourceInfo {
     const D3D12_CLEAR_VALUE*   mOptimizedClearValue{nullptr};
 };
 
+struct GpuDeviceInfo
+{
+    bool mEnableMSAA{ false };
+};
+
 class GpuDevice
 {
 public:
-	GpuDevice() = default;
-	void init();
+	GpuDevice(GpuDeviceInfo&& tInfo);
 
 	void deinit();
 	~GpuDevice() { deinit(); }
@@ -55,6 +59,7 @@ public:
     void                 createUnorderedAccessView(GpuUnorderedAccessView& tSrv, const D3D12_UNORDERED_ACCESS_VIEW_DESC* tDesc);
 
 private:
+    GpuDeviceInfo  mInfo{};
 	ID3D12Device2* mDevice                = nullptr;
 	IDXGIAdapter1* mAdapter               = nullptr;
 	u32            mSupportedFeatureLevel = 0;

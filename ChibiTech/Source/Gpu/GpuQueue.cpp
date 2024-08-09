@@ -7,7 +7,7 @@
 #include <vector>
 
 inline D3D12_COMMAND_LIST_TYPE
-GetD3D12CommandListType(GpuCommandQueueType Type)
+GetD3D12CommandListType(GpuQueueType Type)
 {
 #if 0
 D3D12_COMMAND_LIST_TYPE_DIRECT
@@ -22,28 +22,30 @@ D3D12_COMMAND_LIST_TYPE_NONE
 
 	switch (Type)
 	{
-		case GpuCommandQueueType::Graphics: return D3D12_COMMAND_LIST_TYPE_DIRECT;
-		case GpuCommandQueueType::Compute:  return D3D12_COMMAND_LIST_TYPE_COMPUTE;
-		case GpuCommandQueueType::Copy:     return D3D12_COMMAND_LIST_TYPE_COPY;
-		default:                               return D3D12_COMMAND_LIST_TYPE_NONE;
+		case GpuQueueType::Graphics: return D3D12_COMMAND_LIST_TYPE_DIRECT;
+		case GpuQueueType::Compute:  return D3D12_COMMAND_LIST_TYPE_COMPUTE;
+		case GpuQueueType::Copy:     return D3D12_COMMAND_LIST_TYPE_COPY;
+		default:                     return D3D12_COMMAND_LIST_TYPE_NONE;
 	}
 }
 
-GpuQueue::GpuQueue(GpuCommandQueueType Type, GpuDevice *Device)
+GpuQueue::GpuQueue(GpuQueueType Type, GpuDevice *Device)
 	: mDevice(Device)
 	, mType(Type)
-	, mFenceValue(0)
 {
+	mFenceValue.mType  = u64(Type);
+	mFenceValue.mFence = 0;
+
 	D3D12_COMMAND_QUEUE_DESC QueueDesc = {};
 	QueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 	QueueDesc.Type = GetD3D12CommandListType(mType);
 	AssertHr(mDevice->asHandle()->CreateCommandQueue(&QueueDesc, ComCast(&mQueueHandle)));
 
-	AssertHr(mDevice->asHandle()->CreateFence(mFenceValue, D3D12_FENCE_FLAG_NONE, ComCast(&mQueueFence)));
+	AssertHr(mDevice->asHandle()->CreateFence(mFenceValue.mFence, D3D12_FENCE_FLAG_NONE, ComCast(&mQueueFence)));
 
 	ForRange(u32, i, u32(GpuCommandListType::Count))
 	{
-		mAvailableFlightCommandLists[i] = std::deque<GpuCommandList*>();
+		mAvailableFlightCommandLists[i] = std::deque<GpuCommandListUPtr>();
 	}
 
 	mInFlightCommandLists = std::vector<InFlightList>();
@@ -64,10 +66,10 @@ GpuQueue::deinit()
 	{
 		ForRange(u32, j, mAvailableFlightCommandLists[i].size())
 		{
-			GpuCommandList* List = mAvailableFlightCommandLists[i][j];
-			List->release();
+			GpuCommandListUPtr list = std::move(mAvailableFlightCommandLists[i][j]);
+			list->release();
 
-			delete List;
+			//unique_ptr is freed as it leaves scope
 		}
 
 		mAvailableFlightCommandLists[i].clear();
@@ -89,121 +91,101 @@ void GpuQueue::flush()
 	} while (!mInFlightCommandLists.empty());
 }
 
-GpuCommandList*
-GpuQueue::getCommandList(GpuCommandListType Type)
+GpuCommandListUPtr GpuQueue::getCommandList(GpuCommandListType Type)
 {
 	ASSERT(Type != GpuCommandListType::None);
 	u32 TypeIndex = u32(Type);
 
 	if (mAvailableFlightCommandLists[TypeIndex].size() > 0)
 	{
-        GpuCommandList* Result = mAvailableFlightCommandLists[TypeIndex][u64(0)]; // The List was reset when it became available.
+        GpuCommandListUPtr result = std::move(mAvailableFlightCommandLists[TypeIndex][u64(0)]); // The List was reset when it became available.
 		mAvailableFlightCommandLists[TypeIndex].pop_front();
 
-        Result->reset(); // Let the command list free any resources it was holding onto
-        return Result;
+		result->reset(); // Let the command list free any resources it was holding onto
+        return result;
 	}
 	else
 	{
-		return new GpuCommandList(*mDevice, Type);
+		return std::make_unique<GpuCommandList>(*mDevice, Type);
 	}
 }
 
-u64               
-GpuQueue::executeCommandLists(farray<GpuCommandList*> CommandLists)
+GpuFence GpuQueue::executeCommandLists(std::span<GpuCommandListUPtr> tCommandLists)
 {
-	// TODO(enlynn): Originally...I had to submit a copy for every command list
-	// in order to correctly resolve Resource state. This time around, I would
-	// like this process to be done manually (through a RenderPass perhaps?) instead
-	// of automatically.
+    std::vector<ID3D12CommandList*> toBeSubmitted;
+	toBeSubmitted.reserve(tCommandLists.size());
 
-    std::vector<ID3D12CommandList*> ToBeSubmitted{};
-    ToBeSubmitted.resize(CommandLists.Length());
-
-	ForRange(u64, i, CommandLists.Length())
+	for(auto& list : tCommandLists)
 	{
-        CommandLists[i]->close();
-		ToBeSubmitted[i] = CommandLists[i]->asHandle();
+		list->close();
+		toBeSubmitted.push_back(list->asHandle());
 	}
 
-	// TODO(enlynn): MipMaps
+	mQueueHandle->ExecuteCommandLists((UINT)toBeSubmitted.size(), toBeSubmitted.data());
+	GpuFence nextFenceValue = signal();
 
-	mQueueHandle->ExecuteCommandLists((UINT)ToBeSubmitted.size(), ToBeSubmitted.data());
-	u64 NextFenceValue = signal();
-
-	ForRange(u64, i, CommandLists.Length())
+	for (size_t i = 0; i < tCommandLists.size(); ++i)
 	{
         for (const auto& InFlight : mInFlightCommandLists)
-        {
-            ASSERT(InFlight.CmdList != CommandLists[i]);
-        } 
+        { // fixme: Debug check, is not necessary
+            ASSERT(InFlight.CmdList != tCommandLists[i]);
+        }
 
-		InFlightList InFlight = { .CmdList = CommandLists[i] , .FenceValue = NextFenceValue };
-		mInFlightCommandLists.push_back(InFlight);
+		InFlightList InFlight = { .CmdList = std::move(tCommandLists[i]), .FenceValue = nextFenceValue};
+		mInFlightCommandLists.push_back(std::move(InFlight));
 	}
 
-	ToBeSubmitted.clear();
-
-	return NextFenceValue;
+	return nextFenceValue;
 }
 
-void GpuQueue::submitEmptyCommandList(GpuCommandList* CommandList)
+void GpuQueue::submitEmptyCommandList(GpuCommandListUPtr tCommandList)
 {
-    CommandList->close();
-    mAvailableFlightCommandLists[u32(CommandList->getType())].push_back(CommandList);
+    tCommandList->close();
+    mAvailableFlightCommandLists[u32(tCommandList->getType())].push_back(std::move(tCommandList));
 }
 
-void              
-GpuQueue::processCommandLists()
+void GpuQueue::processCommandLists()
 {
     int iterations = 0;
-    GpuCommandList* OldList = nullptr;
-
 	while (mInFlightCommandLists.size() > 0 && isFenceComplete(mInFlightCommandLists[u64(0)].FenceValue))
 	{
-		InFlightList& List = mInFlightCommandLists[u64(0)];
+		InFlightList& inFlightList = mInFlightCommandLists[u64(0)];
 
-		mAvailableFlightCommandLists[u32(List.CmdList->getType())].push_back(List.CmdList);
-
-        OldList = List.CmdList;
+		mAvailableFlightCommandLists[u32(inFlightList.CmdList->getType())].push_back(std::move(inFlightList.CmdList));
 		mInFlightCommandLists.erase(mInFlightCommandLists.begin());
 
         iterations += 1;
 	}
 }
 
-u64 
-GpuQueue::signal()
+GpuFence GpuQueue::signal()
 {
-	mFenceValue += 1;
-	AssertHr(mQueueHandle->Signal(mQueueFence, mFenceValue));
+	mFenceValue.mFence += 1;
+	AssertHr(mQueueHandle->Signal(mQueueFence, mFenceValue.mFence));
 	return mFenceValue;
 }
 
-bool           
-GpuQueue::isFenceComplete(u64 FenceValue)
+bool GpuQueue::isFenceComplete(GpuFence tFenceValue)
 {
-	return mQueueFence->GetCompletedValue() >= FenceValue;
+	return mQueueFence->GetCompletedValue() >= tFenceValue.mFence;
 }
 
-GpuFenceResult
-GpuQueue::waitForFence(u64 FenceValue)
+bool GpuQueue::waitForFence(GpuFence tFenceValue)
 {
-	if (mQueueFence->GetCompletedValue() < FenceValue)
+	if (mQueueFence->GetCompletedValue() < mFenceValue.mFence)
 	{
         HANDLE Event = ::CreateEvent(NULL, FALSE, FALSE, NULL);
-		AssertHr(mQueueFence->SetEventOnCompletion(FenceValue, Event));
+		AssertHr(mQueueFence->SetEventOnCompletion(mFenceValue.mFence, Event));
 		WaitForSingleObject(Event, INFINITE);
 		::CloseHandle(Event);
 	}
 
 	// TODO(enlynn): Would it be worth updating the fence value here?
 
-	return GpuFenceResult::success;
+	return true;
 }
 
-void             
-GpuQueue::wait(const GpuQueue* OtherQueue)
+void GpuQueue::wait(const GpuQueue* tOtherQueue)
 {
-	mQueueHandle->Wait(OtherQueue->mQueueFence, OtherQueue->mFenceValue);
+	mQueueHandle->Wait(tOtherQueue->mQueueFence, tOtherQueue->mFenceValue.mFence);
 }

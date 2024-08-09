@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.27)
+cmake_minimum_required(VERSION 3.8)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Collect all of the source files
@@ -60,7 +60,7 @@ IF (WIN32)
     )
 
     # GLFW_EXPOSE_NATIVE_WIN32 is required to fetch the Win32 Window handle when creating a SwapChain
-    add_compile_definitions(chibi-tech PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX CT_PLATFORM_WINDOWS)
+    target_compile_definitions(chibi-tech PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX CT_PLATFORM_WINDOWS)
     target_link_libraries(chibi-tech PRIVATE
             Winmm.lib
             dxgi.lib
@@ -72,15 +72,15 @@ IF (WIN32)
 endif (WIN32)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_compile_definitions(chibi-tech PRIVATE CT_DEBUG)
+    target_compile_definitions(chibi-tech PRIVATE CT_DEBUG)
 endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
-    add_compile_definitions(chibi-tech PRIVATE CT_DIST)
+    target_compile_definitions(chibi-tech PRIVATE CT_DIST)
 endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-    add_compile_definitions(chibi-tech PRIVATE CT_RELEASE)
+    target_compile_definitions(chibi-tech PRIVATE CT_RELEASE)
 endif()
 
 target_link_libraries(chibi-tech PRIVATE glfw)

@@ -256,7 +256,7 @@ void ScenePass::onRender(struct GpuFrameCache *FrameCache, struct HelloCubeApp *
     mRenderTarget.attachTexture(AttachmentPoint::Color0, SceneFramebuffer);
     mRenderTarget.attachTexture(AttachmentPoint::DepthStencil, DepthBuffer);
 
-    GpuCommandList* commandList = FrameCache->getGraphicsCommandList();
+    GpuCommandList* commandList = FrameCache->borrowGraphicsCommandList();
 
     // Clear the Framebuffer and bind the render target.
     FrameCache->transitionResource(SceneFramebuffer->getResource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -303,7 +303,7 @@ void ResolvePass::onDeinit(struct GpuFrameCache *FrameCache) {} // No Resources 
 
 void ResolvePass::onRender(struct GpuFrameCache *FrameCache)
 {
-    GpuCommandList* commandList = FrameCache->getGraphicsCommandList();
+    GpuCommandList* commandList = FrameCache->borrowGraphicsCommandList();
 
     GpuRenderTarget* SwapchainRenderTarget = FrameCache->mGlobal->mSwapchain->getRenderTarget();
 

@@ -62,15 +62,12 @@ namespace {
     }
 }
 
-GpuState::GpuState(const ct::os::Window& tWindow) {
-
-    mDevice = std::make_unique<GpuDevice>();
-    mDevice->init();
-
-    mGraphicsQueue = std::make_unique<GpuQueue>(GpuCommandQueueType::Graphics, mDevice.get());
-    mCopyQueue     = std::make_unique<GpuQueue>(GpuCommandQueueType::Copy, mDevice.get());
-    mComputeQueue  = std::make_unique<GpuQueue>(GpuCommandQueueType::Compute, mDevice.get());
-
+GpuState::GpuState(const ct::os::Window& tWindow)
+    : mDevice(std::make_unique<GpuDevice>(GpuDeviceInfo{
+            .mEnableMSAA = false // todo: make this configurable
+        }))
+    , mQueueManager(mDevice.get())
+{
     mGlobalResourceState = std::make_unique<GpuGlobalResourceState>();
     mGlobalResourceState->mKnownStates.reserve(10);
 
@@ -96,7 +93,7 @@ GpuState::GpuState(const ct::os::Window& tWindow) {
 
     GpuSwapchainInfo swapchainInfo = {
             .mDevice                    = mDevice.get(),
-            .mPresentQueue              = mGraphicsQueue.get(),
+            .mPresentQueue              = mQueueManager.getQueue(GpuQueueType::Graphics),
             .mRenderTargetDesciptorHeap = &mStaticDescriptors[D3D12_DESCRIPTOR_HEAP_TYPE_RTV],
             // Leave everything else at their defaults for now...
     };
@@ -125,9 +122,8 @@ bool GpuState::beginFrame() {
     frameCache->mResourceStateTracker.reset();
 
     // Update any pending command lists
-    mGraphicsQueue->processCommandLists();
-    mCopyQueue->processCommandLists();
-    mComputeQueue->processCommandLists();
+    mQueueManager.processPendingCommandLists();
+
 
     // Clean up any previous resources
     frameCache->releaseStateResources();
@@ -154,9 +150,7 @@ bool GpuState::endFrame() {
 }
 
 void GpuState::destroy() {
-    mGraphicsQueue->flush();
-    mCopyQueue->flush();
-    mComputeQueue->flush();
+    mQueueManager.flushGpu();
 
     GpuFrameCache* frameCache = getFrameCache();
 

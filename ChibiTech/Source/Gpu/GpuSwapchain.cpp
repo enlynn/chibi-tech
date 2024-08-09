@@ -79,7 +79,7 @@ GpuSwapchain::GpuSwapchain(GpuFrameCache* FrameCache, GpuSwapchainInfo& Info, co
 
 	ForRange(u32, i, cMaxBackBufferCount)
 	{
-		mFenceValues[i] = 0;
+        mFenceValues[i] = {};
 	}
 
     // It is my expectation the number of Buffers we requested, matches the number actually created.
@@ -160,8 +160,7 @@ void GpuSwapchain::resize(GpuFrameCache* FrameCache, u32 Width, u32 Height)
     }
 }
 
-void 
-GpuSwapchain::release(GpuFrameCache* FrameCache)
+void  GpuSwapchain::release(GpuFrameCache* FrameCache)
 {
 	ForRange(u32, i, cMaxBackBufferCount)
 	{ // Release all possible backbuffers
@@ -173,8 +172,7 @@ GpuSwapchain::release(GpuFrameCache* FrameCache)
 	mInfo = {};
 }
 
-GpuRenderTarget*
-GpuSwapchain::getRenderTarget()
+GpuRenderTarget* GpuSwapchain::getRenderTarget()
 {
     mRenderTarget.reset();
     mRenderTarget.attachTexture(AttachmentPoint::Color0, &mBackbuffers[mBackbufferIndex]);
@@ -182,8 +180,7 @@ GpuSwapchain::getRenderTarget()
     return &mRenderTarget;
 }
 
-u64 
-GpuSwapchain::present()
+u64 GpuSwapchain::present()
 {
 	const UINT SyncInterval = mInfo.mVSyncEnabled ? 1 : 0;
 

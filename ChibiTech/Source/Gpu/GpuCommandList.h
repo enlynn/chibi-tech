@@ -12,6 +12,8 @@
 #include <Math/Math.h>
 #include <Util/array.h>
 
+#include <memory>
+
 class GpuDevice;
 class GpuResource;
 class GpuPso;
@@ -40,8 +42,7 @@ struct GpuTransitionBarrier
 class GpuCommandList
 {
 public:
-	GpuCommandList() = default;
-	explicit GpuCommandList(GpuDevice& Device, GpuCommandListType Type);
+	GpuCommandList(GpuDevice& Device, GpuCommandListType Type);
 
 	~GpuCommandList() { release(); } // NOTE: I bet this will cause problems
 	void release();
@@ -184,3 +185,5 @@ private:
 	ID3D12PipelineState*              mBoundPipeline                                              = nullptr;
 	ID3D12RootSignature*              mBoundRootSignature                                         = nullptr;
 };
+
+using GpuCommandListUPtr = std::unique_ptr<GpuCommandList>;

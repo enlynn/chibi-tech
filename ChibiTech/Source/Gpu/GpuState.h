@@ -5,6 +5,7 @@
 #include "GpuResource.h"
 #include "GpuCommandList.h"
 #include "GpuQueue.h"
+#include "GpuQueueManager.h"
 #include "GpuSwapchain.h"
 #include "GpuBuffer.h"
 #include "GpuRootSignature.h"
@@ -46,9 +47,10 @@ struct GpuState
 	std::unique_ptr<GpuDevice>     mDevice{nullptr};
     std::unique_ptr<GpuSwapchain>  mSwapchain{nullptr};
 
-    std::unique_ptr<GpuQueue> mGraphicsQueue{nullptr};
+    /*std::unique_ptr<GpuQueue> mGraphicsQueue{nullptr};
     std::unique_ptr<GpuQueue> mComputeQueue{nullptr};
-    std::unique_ptr<GpuQueue> mCopyQueue{nullptr};
+    std::unique_ptr<GpuQueue> mCopyQueue{nullptr};*/
+    GpuQueueManager                mQueueManager;
 
 	std::array<CpuDescriptorAllocator, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES> mStaticDescriptors;  // Global descriptors, long lived
 
@@ -62,18 +64,19 @@ struct GpuState
 
 struct GpuFrameCache
 {
-	GpuState*                         mGlobal = nullptr;
-	std::vector<GpuResource>          mStaleResources = {}; // Resources that needs to be freed. Is freed on next use
-    std::vector<ID3D12Object*>        mStaleObjects{};
+	GpuState*                  mGlobal = nullptr;
+	std::vector<GpuResource>   mStaleResources = {}; // Resources that needs to be freed. Is freed on next use
+    std::vector<ID3D12Object*> mStaleObjects{};
 
-	GpuCommandList*          mGraphicsList = nullptr;
-	GpuCommandList*          mCopyList     = nullptr;
-	GpuCommandList*          mComputeList  = nullptr;
+	GpuCommandListUPtr         mGraphicsList = nullptr;
+	GpuCommandListUPtr         mCopyList     = nullptr;
+	GpuCommandListUPtr         mComputeList  = nullptr;
 
-    GpuResourceStateTracker mResourceStateTracker = {};
+    GpuResourceStateTracker    mResourceStateTracker = {};
 
     // NOTE(Enlynn): ideally we would create this from a scratch memory texture pool, but for now,
     // let's just create one texture per FrameCache
+    // TODO(enlynn): Make this a dictionary<FramebufferIdentifier, std::vector<GpuTextures>>
     std::array<GpuTexture, u32(GpuFramebufferBinding::Max)> mFramebuffers{};
 
     //
@@ -86,52 +89,59 @@ struct GpuFrameCache
 
     void flushGpu()
     {
-        mGlobal->mGraphicsQueue->flush();
+        mGlobal->mQueueManager.flushGpu();
         // TODO(enlynn): flush the mCompute and Copy Queues
     }
 
 	// Convenience Function to get the active command list
 	// For now, just using the Graphics command list
-	GpuCommandList* getGraphicsCommandList() { if (!mGraphicsList) { mGraphicsList = mGlobal->mGraphicsQueue->getCommandList(); } return mGraphicsList; }
-	GpuCommandList* getCopyCommandList()     { if (!mGraphicsList) { mGraphicsList = mGlobal->mGraphicsQueue->getCommandList(); } return mGraphicsList; }
-	GpuCommandList* getComputeCommandList()  { if (!mGraphicsList) { mGraphicsList = mGlobal->mGraphicsQueue->getCommandList(); } return mGraphicsList; }
+	GpuCommandList* borrowGraphicsCommandList() { if (!mGraphicsList) { mGraphicsList = mGlobal->mQueueManager.getGraphicsCommandList(); } return mGraphicsList.get(); }
+	GpuCommandList* borrowCopyCommandList()     { if (!mGraphicsList) { mGraphicsList = mGlobal->mQueueManager.getGraphicsCommandList(); } return mGraphicsList.get(); }
+	GpuCommandList* borrowComputeCommandList()  { if (!mGraphicsList) { mGraphicsList = mGlobal->mQueueManager.getGraphicsCommandList(); } return mGraphicsList.get(); }
 
 	// Convenience Function to submit the active command list
 	// For now, just using the Graphics command list
-	void submitGraphicsCommandList() { submitGraphicsCommandList(mGraphicsList); mGraphicsList = nullptr; }
-	void submitCopyCommandList()     { submitGraphicsCommandList(mGraphicsList); mGraphicsList = nullptr; }
-	void submitComputeCommandList()  { submitGraphicsCommandList(mGraphicsList); mGraphicsList = nullptr; }
+	void submitGraphicsCommandList() { submitGraphicsCommandList(std::move(mGraphicsList)); mGraphicsList = nullptr; }
+	void submitCopyCommandList()     { submitGraphicsCommandList(std::move(mGraphicsList)); mGraphicsList = nullptr; }
+	void submitComputeCommandList()  { submitGraphicsCommandList(std::move(mGraphicsList)); mGraphicsList = nullptr; }
 
 	// Similar to the above functions, but can submit a one-time use command list
-	void submitGraphicsCommandList(GpuCommandList* CommandList)
+	void submitGraphicsCommandList(GpuCommandListUPtr tCommandList)
     {
-        if (CommandList)
+        if (tCommandList)
         {
             // Get any initial barrier transitions and make sure they happen first
-            GpuCommandList* PendingBarriersList = mGlobal->mGraphicsQueue->getCommandList();
-            u32 NumPendingBarriers = mGlobal->mGlobalResourceState->flushPendingResourceBarriers(*PendingBarriersList,
-                                                                                                 mResourceStateTracker);
+            GpuCommandListUPtr pendingBarriersList = mGlobal->mQueueManager.getGraphicsCommandList();
+            u32 numPendingBarriers = mGlobal->mGlobalResourceState->flushPendingResourceBarriers(*pendingBarriersList, mResourceStateTracker);
 
             // Submit the command lists
-            if (NumPendingBarriers > 0)
+            if (numPendingBarriers > 0)
             {
-                GpuCommandList* ToSubmit[] = {PendingBarriersList, CommandList};
-                mGlobal->mGraphicsQueue->executeCommandLists(farray(ToSubmit, 2));
+                GpuCommandListUPtr lists[2] = { std::move(pendingBarriersList), std::move(tCommandList) };
+                mGlobal->mQueueManager.submitCommandLists(std::span(lists, 2));
             }
             else
             {
-                mGlobal->mGraphicsQueue->submitEmptyCommandList(PendingBarriersList); // no barriers recorded.
-                mGlobal->mGraphicsQueue->executeCommandLists(farray(&CommandList, 1));
+                // no barriers recorded. return list to waiting queue.
+                mGlobal->mQueueManager.submitEmptyCommandList(std::move(pendingBarriersList));
+                mGlobal->mQueueManager.submitCommandList(std::move(tCommandList));
             }
 
             mGlobal->mGlobalResourceState->submitResourceStates(mResourceStateTracker);
         }
     }
 
-    void submitCopyCommandList(GpuCommandList* CommandList)     { if (CommandList) {
-            mGlobal->mGraphicsQueue->executeCommandLists(farray(&CommandList, 1)); } }
-    void submitComputeCommandList(GpuCommandList* CommandList)  { if (CommandList) {
-            mGlobal->mGraphicsQueue->executeCommandLists(farray(&CommandList, 1)); } }
+    void submitCopyCommandList(GpuCommandListUPtr tCommandList) {
+        if (tCommandList) {
+            mGlobal->mQueueManager.submitCommandList(std::move(tCommandList));
+        }
+    }
+
+    void submitComputeCommandList(GpuCommandListUPtr tCommandList)  { 
+        if (tCommandList) {
+            mGlobal->mQueueManager.submitCommandList(std::move(tCommandList));
+        }
+    }
 
     // Add a stale Resource to the queue to be freed eventually
     void addStaleResource(GpuResource Resource)                  { mStaleResources.push_back(Resource); }

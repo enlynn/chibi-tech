@@ -81,9 +81,9 @@ void MyClass::borrow(const int* tpMyPtr) {
 ```
 - If the smart pointer is a commonly used type, then alias the type:
 ```c++
-using MyTypeUnique = std::unique_ptr<MyType>;
-using MyTypeShared = std::shared_ptr<MyType>;
-using MyTypeWeak   = std::weak_ptr<MyType>;
+using MyTypeUPtr = std::unique_ptr<MyType>;
+using MyTypeSPtr = std::shared_ptr<MyType>;
+using MyTypeWPtr = std::weak_ptr<MyType>;
 ```
 - Prefer unique pointers over shared pointers.
 

@@ -8,10 +8,10 @@
 #include "GpuDescriptorAllocator.h"
 #include "GpuTexture.h"
 #include "GpuRenderTarget.h"
+#include "GpuQueue.h"
 
 class platform_window;
 class GpuDevice;
-class GpuQueue;
 
 struct GpuFrameCache;
 
@@ -61,7 +61,7 @@ private:
 	IDXGISwapChain3*  mHandle                                    = nullptr;
 	u64               mBackbufferIndex                           = 0;
 	GpuTexture        mBackbuffers[cMaxBackBufferCount]          = {};
-	u64               mFenceValues[cMaxBackBufferCount]          = {};
+	GpuFence          mFenceValues[cMaxBackBufferCount]          = {};
 	u32               mWidth                                     = 0;
 	u32               mHeight                                    = 0;
 	//CpuDescriptor   mDescriptors[cMaxBackBufferCount]          = {};

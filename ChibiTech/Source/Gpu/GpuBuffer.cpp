@@ -8,7 +8,7 @@ GpuResource
 GpuBuffer::copyBuffer(struct GpuFrameCache *FrameCache, void* BufferData, u64 BufferSize, D3D12_RESOURCE_FLAGS Flags, D3D12_RESOURCE_STATES InitialBufferState)
 {
     GpuDevice*      Device      = FrameCache->getDevice();
-    GpuCommandList* CommandList = FrameCache->getCopyCommandList();
+    GpuCommandList* CommandList = FrameCache->borrowCopyCommandList();
 
 	GpuResource Result = {};
 	if (BufferSize == 0)

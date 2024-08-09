@@ -21,8 +21,8 @@ void DeviceValidationCallback(
     ct::console::warn("%s", pDescription);
 }
 
-void 
-GpuDevice::init()
+GpuDevice::GpuDevice(GpuDeviceInfo&& tInfo)
+	: mInfo(tInfo)
 {
     enableDebugDevice();
     selectAdapter();
