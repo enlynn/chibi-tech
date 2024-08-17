@@ -35,7 +35,7 @@ class GpuQueue
 {
 public:
 	GpuQueue() = default;
-	GpuQueue(GpuQueueType Type, GpuDevice *Device);
+	GpuQueue(GpuQueueType Type, std::shared_ptr<GpuDevice> Device);
 	~GpuQueue() { deinit(); }
 
 	inline ID3D12CommandQueue* asHandle() const { return mQueueHandle; }
@@ -58,14 +58,13 @@ public:
 	void              wait(const GpuQueue* OtherQueue);      // (blocking)    wait for another command queue to finish executing
 
 private:
-	GpuDevice*          mDevice        = nullptr;
-	GpuQueueType        mType          = GpuQueueType::None;
-
-	ID3D12CommandQueue* mQueueHandle   = nullptr;
+	std::shared_ptr<GpuDevice> mDevice        = nullptr;
+	GpuQueueType               mType          = GpuQueueType::None;
+	ID3D12CommandQueue*        mQueueHandle   = nullptr;
 
 	// Synchronization
-	ID3D12Fence*        mQueueFence   = nullptr;
-	GpuFence            mFenceValue   = {};
+	ID3D12Fence*               mQueueFence   = nullptr;
+	GpuFence                   mFenceValue   = {};
 
 	// TODO:
 	// - Determine if creating command lists on the fly is cheap
@@ -79,8 +78,4 @@ private:
 
 	std::vector<InFlightList>      mInFlightCommandLists                                        = {};
     std::deque<GpuCommandListUPtr> mAvailableFlightCommandLists[u32(GpuCommandListType::Count)] = {}; // slot for each array type
-
-	//std::deque<InFlightList>    mInFlightCommandLists = {};
-	//std::deque<GpuCommandList*> mAvailableFlightCommandLists[u32(GpuCommandListType::Count)] = {};
-
 };

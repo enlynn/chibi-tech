@@ -42,7 +42,7 @@ struct GpuTransitionBarrier
 class GpuCommandList
 {
 public:
-	GpuCommandList(GpuDevice& Device, GpuCommandListType Type);
+	GpuCommandList(GpuDeviceSPtr Device, GpuCommandListType Type);
 
 	~GpuCommandList() { release(); } // NOTE: I bet this will cause problems
 	void release();
@@ -177,7 +177,7 @@ private:
 	struct ID3D12GraphicsCommandList* mHandle                                                     = nullptr;
 	struct ID3D12CommandAllocator*    mAllocator                                                  = nullptr;
 
-	GpuDevice*                        mDevice                                                     = nullptr;
+	GpuDeviceSPtr                     mDevice                                                     = nullptr;
 
 	ID3D12DescriptorHeap*             mBoundDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES] = {};
 	GpuDynamicDescriptorHeap          mDynamicDescriptors[u32(DynamicHeapType::Max)]              = {};

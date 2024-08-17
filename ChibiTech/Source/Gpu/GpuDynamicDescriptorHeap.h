@@ -28,7 +28,7 @@ class GpuDynamicDescriptorHeap
 {
 public:
     GpuDynamicDescriptorHeap() = default;
-    GpuDynamicDescriptorHeap(GpuDevice *Device, DynamicHeapType Type, u32 CountPerHeap = 1024);
+    GpuDynamicDescriptorHeap(std::shared_ptr<GpuDevice> Device, DynamicHeapType Type, u32 CountPerHeap = 1024);
     void deinit();
 
     // Stages a contiguous range of CPU descriptors. mDescriptors are not copied to the
@@ -94,7 +94,7 @@ private:
         D3D12_CPU_DESCRIPTOR_HANDLE* mBaseDescriptor = 0;
     };
 
-    GpuDevice*                          mDevice             = nullptr;
+    std::shared_ptr<GpuDevice>           mDevice             = nullptr;
 
     // Describes the type of descriptors that can be staged using this
     // Dynamic descriptor heap. Valid values are:

@@ -241,7 +241,7 @@ bool RaytracerApp::onInit(ct::Engine& tEngine) {
 
             D3D12_RESOURCE_DESC rsrcDesc = getTex2DDesc(format, mRayImageWidth, mRayImageHeight);
             rayTexture = GpuTexture(frameCache, rsrcDesc);
-            copyRayTextureToGpu(*frameCache, *frameCache->getCopyCommandList(), mRayTextures[mNextRayIndex], mImage.data(), mRayImageWidth, mRayImageHeight);
+            copyRayTextureToGpu(*frameCache, *frameCache->borrowCopyCommandList(), mRayTextures[mNextRayIndex], mImage.data(), mRayImageWidth, mRayImageHeight);
         }
 
         // Copy to the first and second texture.
@@ -265,7 +265,7 @@ bool RaytracerApp::onRender(ct::Engine& tEngine) {
     gpuState->beginFrame();
 
     auto frameCache = gpuState->getFrameCache();
-    GpuCommandList *commandList = frameCache->getGraphicsCommandList();
+    GpuCommandList *commandList = frameCache->borrowGraphicsCommandList();
 
     // Upadte the current Ray texture
     //

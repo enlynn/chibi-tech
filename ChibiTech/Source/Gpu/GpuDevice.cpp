@@ -96,11 +96,19 @@ GpuDevice::GpuDevice(GpuDeviceInfo&& tInfo)
 	{
 		mSupportedFeatureLevel = gMinFeatureLevel;
 	}
+
+	for (size_t i = 0; i < mStaticDescriptors.size(); ++i) {
+		mStaticDescriptors[i].init(this, (D3D12_DESCRIPTOR_HEAP_TYPE)i);
+	}
 }
 
 void 
 GpuDevice::deinit()
 {
+	for (size_t i = 0; i < mStaticDescriptors.size(); ++i) {
+		mStaticDescriptors[i].deinit();
+	}
+
 	ComSafeRelease(mDevice);
 	ComSafeRelease(mAdapter);
 
@@ -282,3 +290,28 @@ void GpuDevice::createUnorderedAccessView(GpuUnorderedAccessView &tUav, const D3
     mDevice->CreateUnorderedAccessView(tUav.getResource()->asHandle(), counterHandle, tDesc, tUav.getDescriptorHandle());
 }
 
+DXGI_FORMAT GpuDevice::getDisplayFormat()
+{
+	
+	return mHDREnabled ? DXGI_FORMAT_R10G10B10A2_UINT : DXGI_FORMAT_R8G8B8A8_UNORM;
+}
+
+DXGI_FORMAT GpuDevice::getTargetFormat()
+{
+	return mHDREnabled ? DXGI_FORMAT_R16G16B16A16_FLOAT : DXGI_FORMAT_R8G8B8A8_UNORM;
+}
+
+DXGI_FORMAT GpuDevice::getDepthFormat()
+{
+	return DXGI_FORMAT_D32_FLOAT;
+}
+
+CpuDescriptor GpuDevice::allocateCpuDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE tDescriptorType, u32 tNumDescriptors) 
+{
+	return mStaticDescriptors[tDescriptorType].allocate(tNumDescriptors);
+}
+
+void GpuDevice::releaseDescriptors(CpuDescriptor tDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE tDescriptorType) 
+{
+	mStaticDescriptors[tDescriptorType].releaseDescriptors(tDescriptor);
+}

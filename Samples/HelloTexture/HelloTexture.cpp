@@ -253,7 +253,7 @@ void MipsGenerator::generateMips(GpuFrameCache& tFrameCache, GpuCommandList& tAc
     GpuCommandList* commandList = &tActiveCommandList;
     if (commandList->getType() == GpuCommandListType::Copy)
     {
-        commandList = tFrameCache.getComputeCommandList();
+        commandList = tFrameCache.borrowComputeCommandList();
     }
 
     auto d3dDevice = tFrameCache.getDevice()->asHandle();
@@ -554,7 +554,7 @@ bool HelloTextureApp::onInit(ct::Engine& tEngine) {
     mMipsGenerator = MipsGenerator(tEngine);
 
     { // Load the texture and upload to the GPU!
-        auto* commandList = frameCache->getComputeCommandList();
+        auto* commandList = frameCache->borrowComputeCommandList();
 
         namespace fs = std::filesystem;
         fs::path imagePath = fs::path(HelloTexture_CONTENT_PATH) / "Textures/wall.jpg";
@@ -577,7 +577,7 @@ bool HelloTextureApp::onRender(ct::Engine& tEngine) {
     gpuState->beginFrame();
 
     auto frameCache = gpuState->getFrameCache();
-    GpuCommandList *commandList = frameCache->getGraphicsCommandList();
+    GpuCommandList *commandList = frameCache->borrowGraphicsCommandList();
 
     GpuRenderTarget renderTarget{};
     { // Setup Render Target

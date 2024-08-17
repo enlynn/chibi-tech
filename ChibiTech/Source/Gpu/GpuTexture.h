@@ -11,13 +11,13 @@ class GpuTexture
 {
 public:
     GpuTexture() = default;
-    GpuTexture(GpuFrameCache* FrameCache, GpuResource Resource);
-    GpuTexture(GpuFrameCache* tFrameCache, const D3D12_RESOURCE_DESC& tDesc, std::optional<D3D12_CLEAR_VALUE> tClearValue = std::nullopt);
+    GpuTexture(GpuDevice* tDevice, GpuResource tResource);
+    GpuTexture(GpuDevice* tDevice, const D3D12_RESOURCE_DESC& tDesc, std::optional<D3D12_CLEAR_VALUE> tClearValue = std::nullopt);
 
-    void releaseUnsafe(GpuFrameCache* FrameCache);
+    void releaseUnsafe(GpuDevice* tDevice);
 
     void resize(GpuFrameCache* FrameCache, u32 Width, u32 Height);
-    void createViews(GpuFrameCache* FrameCache);
+    void createViews(GpuDevice* tDevice);
 
     D3D12_RESOURCE_DESC getResourceDesc()       const { return mResource.getResourceDesc(); }
     const GpuResource*  getResource()           const { return &mResource;                  }

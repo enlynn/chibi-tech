@@ -131,7 +131,7 @@ bool HelloTextureApp::onRender(ct::Engine& tEngine) {
     gpuState->beginFrame();
 
     auto frameCache = gpuState->getFrameCache();
-    GpuCommandList *commandList = frameCache->getGraphicsCommandList();
+    GpuCommandList *commandList = frameCache->borrowGraphicsCommandList();
 
     GpuRenderTarget renderTarget{};
     { // Setup Render Target

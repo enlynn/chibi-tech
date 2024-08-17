@@ -36,27 +36,18 @@ struct GpuState
     bool beginFrame();
     bool endFrame();
 
-    CpuDescriptor allocateCpuDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE tDescriptorType, u32 tNumDescriptors = 1);
-    void releaseDescriptors(CpuDescriptor tDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE tDescriptorType);
-
 	u64                        mFrameCount = 0;
 
     // For loader Shader Sources - TODO: probably  remove?
     ResourceSystem*                mResourceSystem;
 
-	std::unique_ptr<GpuDevice>     mDevice{nullptr};
-    std::unique_ptr<GpuSwapchain>  mSwapchain{nullptr};
-
-    /*std::unique_ptr<GpuQueue> mGraphicsQueue{nullptr};
-    std::unique_ptr<GpuQueue> mComputeQueue{nullptr};
-    std::unique_ptr<GpuQueue> mCopyQueue{nullptr};*/
+    GpuDeviceSPtr                  mDevice{nullptr};
     GpuQueueManager                mQueueManager;
-
-	std::array<CpuDescriptorAllocator, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES> mStaticDescriptors;  // Global descriptors, long lived
+    std::unique_ptr<GpuSwapchain>  mSwapchain{nullptr};
 
     std::unique_ptr<GpuGlobalResourceState> mGlobalResourceState;
 
-	static constexpr  int   cMaxFrameCache = 5; // Keep up to 5 frames in the cache
+	static constexpr int cMaxFrameCache = 5; // Keep up to 5 frames in the cache
 	std::array<std::unique_ptr<GpuFrameCache>, cMaxFrameCache> mPerFrameCache{};
 
 	[[nodiscard]] inline struct GpuFrameCache* getFrameCache() const;
@@ -64,8 +55,8 @@ struct GpuState
 
 struct GpuFrameCache
 {
-	GpuState*                  mGlobal = nullptr;
-	std::vector<GpuResource>   mStaleResources = {}; // Resources that needs to be freed. Is freed on next use
+    GpuState*                  mGlobal{ nullptr };
+	std::vector<GpuResource>   mStaleResources{}; // Resources that needs to be freed. Is freed on next use
     std::vector<ID3D12Object*> mStaleObjects{};
 
 	GpuCommandListUPtr         mGraphicsList = nullptr;
@@ -137,7 +128,7 @@ struct GpuFrameCache
         }
     }
 
-    void submitComputeCommandList(GpuCommandListUPtr tCommandList)  { 
+    void submitComputeCommandList(GpuCommandListUPtr tCommandList) { 
         if (tCommandList) {
             mGlobal->mQueueManager.submitCommandList(std::move(tCommandList));
         }
@@ -189,7 +180,7 @@ struct GpuFrameCache
 
     void flushResourceBarriers(GpuCommandList* CommandList) { mResourceStateTracker.flushResourceBarriers(CommandList); }
 
-    void releaseStateResources();
+    void releaseStaleResources();
 };
 
 inline GpuFrameCache* GpuState::getFrameCache() const { return mPerFrameCache[mFrameCount % cMaxFrameCache].get(); }

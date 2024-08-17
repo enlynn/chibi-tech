@@ -56,7 +56,7 @@ SetComputeRootUAVWrapper(ID3D12GraphicsCommandList* CommandList, UINT RootIndex,
 	CommandList->SetComputeRootUnorderedAccessView(RootIndex, GpuDescriptorHandle);
 }
 
-GpuDynamicDescriptorHeap::GpuDynamicDescriptorHeap(GpuDevice *Device, DynamicHeapType Type, u32 CountPerHeap)
+GpuDynamicDescriptorHeap::GpuDynamicDescriptorHeap(GpuDeviceSPtr Device, DynamicHeapType Type, u32 CountPerHeap)
 : mDevice(Device)
 , mDescriptorsPerHeap(CountPerHeap)
 , mDescriptorStride(mDevice->asHandle()->GetDescriptorHandleIncrementSize(mHeapType))

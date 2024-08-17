@@ -78,21 +78,21 @@ D3D12_COMMAND_LIST_TYPE_NONE = -1
 	}
 }
 
-GpuCommandList::GpuCommandList(GpuDevice& Device, GpuCommandListType Type)
+GpuCommandList::GpuCommandList(GpuDeviceSPtr Device, GpuCommandListType Type)
 	: mType(Type)
-	, mDevice(&Device)
+	, mDevice(Device)
 {
 	const D3D12_COMMAND_LIST_TYPE d3D12Type = ToD3D12CommandListType(Type);
 
-	AssertHr(Device.asHandle()->CreateCommandAllocator(d3D12Type, ComCast(&mAllocator)));
-	AssertHr(Device.asHandle()->CreateCommandList(0, d3D12Type, mAllocator, nullptr, ComCast(&mHandle)));
+	AssertHr(Device->asHandle()->CreateCommandAllocator(d3D12Type, ComCast(&mAllocator)));
+	AssertHr(Device->asHandle()->CreateCommandList(0, d3D12Type, mAllocator, nullptr, ComCast(&mHandle)));
 
 	// A command list is created in the recording state, but since the Command Queue is responsible for fetching
 	// a command list, it is ok for the list to stay in this state.
 
 	ForRange(int, i, u32(DynamicHeapType::Max))
 	{
-		mDynamicDescriptors[i] = GpuDynamicDescriptorHeap(&Device, DynamicHeapType(i), 1024);
+		mDynamicDescriptors[i] = GpuDynamicDescriptorHeap(Device, DynamicHeapType(i), 1024);
 	}
 }
 

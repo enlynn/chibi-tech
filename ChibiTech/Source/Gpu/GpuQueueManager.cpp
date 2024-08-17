@@ -2,7 +2,7 @@
 #include "D3D12Common.h"
 #include "GpuQueueManager.h"
 
-GpuQueueManager::GpuQueueManager(GpuDevice* tDevice)
+GpuQueueManager::GpuQueueManager(GpuDeviceSPtr tDevice)
 	: mGraphicsQueue(GpuQueueType::Graphics, tDevice)
 	, mComputeQueue(GpuQueueType::Compute,   tDevice)
 	, mCopyQueue(GpuQueueType::Copy,         tDevice)

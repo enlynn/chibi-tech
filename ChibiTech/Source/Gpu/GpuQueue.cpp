@@ -29,7 +29,7 @@ D3D12_COMMAND_LIST_TYPE_NONE
 	}
 }
 
-GpuQueue::GpuQueue(GpuQueueType Type, GpuDevice *Device)
+GpuQueue::GpuQueue(GpuQueueType Type, GpuDeviceSPtr Device)
 	: mDevice(Device)
 	, mType(Type)
 {
@@ -106,7 +106,7 @@ GpuCommandListUPtr GpuQueue::getCommandList(GpuCommandListType Type)
 	}
 	else
 	{
-		return std::make_unique<GpuCommandList>(*mDevice, Type);
+		return std::make_unique<GpuCommandList>(mDevice, Type);
 	}
 }
 

@@ -62,46 +62,45 @@ GetUAVDesc(D3D12_RESOURCE_DESC* ResDesc, UINT MipSlice, UINT ArraySlice = 0, UIN
     return UavDesc;
 }
 
-void GpuTexture::releaseUnsafe(GpuFrameCache* FrameCache)
+void GpuTexture::releaseUnsafe(GpuDevice* tDevice)
 {
     mResource.release();
     if (!mRTV.isNull())
     {
-        FrameCache->mGlobal->mStaticDescriptors[D3D12_DESCRIPTOR_HEAP_TYPE_RTV].releaseDescriptors(mRTV);
+        tDevice->releaseDescriptors(mRTV, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
     }
     if (!mDSV.isNull())
     {
-        FrameCache->mGlobal->mStaticDescriptors[D3D12_DESCRIPTOR_HEAP_TYPE_DSV].releaseDescriptors(mDSV);
+        tDevice->releaseDescriptors(mDSV, D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
     }
     if (!mSRV.isNull())
     {
-        FrameCache->mGlobal->mStaticDescriptors[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].releaseDescriptors(mSRV);
+        tDevice->releaseDescriptors(mSRV, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     }
     if (!mUAV.isNull())
     {
-        FrameCache->mGlobal->mStaticDescriptors[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].releaseDescriptors(mUAV);
+        tDevice->releaseDescriptors(mUAV, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     }
 }
 
-GpuTexture::GpuTexture(GpuFrameCache* FrameCache, GpuResource Resource) : mResource(Resource)
+GpuTexture::GpuTexture(GpuDevice* tpDevice, GpuResource tResource) : mResource(tResource)
 {
-    createViews(FrameCache);
+    createViews(tpDevice);
 }
 
-GpuTexture::GpuTexture(GpuFrameCache *tFrameCache, const D3D12_RESOURCE_DESC &tDesc, std::optional<D3D12_CLEAR_VALUE> tClearValue)
-: mResource(*tFrameCache->getDevice(), tDesc, tClearValue)
+GpuTexture::GpuTexture(GpuDevice* tpDevice, const D3D12_RESOURCE_DESC &tDesc, std::optional<D3D12_CLEAR_VALUE> tClearValue)
+: mResource(*tpDevice, tDesc, tClearValue)
 {
     mResource.asHandle()->SetName(L"Texture2D");
 
-    createViews(tFrameCache);
-    tFrameCache->trackResource(mResource, D3D12_RESOURCE_STATE_COMMON);
+    createViews(tpDevice);
+    //tFrameCache->trackResource(mResource, D3D12_RESOURCE_STATE_COMMON);
 }
-
 
 void
 GpuTexture::resize(GpuFrameCache* FrameCache, u32 Width, u32 Height)
 {
-    GpuDevice*         Device = FrameCache->getDevice();
+    GpuDevice* pDevice = FrameCache->getDevice();
     D3D12_RESOURCE_DESC Desc   = mResource.getResourceDesc();
 
     if (Desc.Width != Width || Desc.Height == Height)
@@ -119,34 +118,33 @@ GpuTexture::resize(GpuFrameCache* FrameCache, u32 Width, u32 Height)
         ID3D12Resource* TempResource = nullptr;
 
         D3D12_HEAP_PROPERTIES HeapProperties = getHeapProperties();
-        AssertHr(Device->asHandle()->CreateCommittedResource(
+        AssertHr(pDevice->asHandle()->CreateCommittedResource(
             &HeapProperties, D3D12_HEAP_FLAG_NONE, &Desc,
             D3D12_RESOURCE_STATE_COMMON, ClearValuePtr, ComCast(&TempResource)));
 
         // TODO(enlynn): Resource is created in the COMMON state, do I need to transition it to a new state?
 
-        mResource = GpuResource(*Device, TempResource, ClearValue);
-        createViews(FrameCache);
+        mResource = GpuResource(*pDevice, TempResource, ClearValue);
+        createViews(pDevice);
     }
 }
 
 void
-GpuTexture::createViews(GpuFrameCache* FrameCache)
+GpuTexture::createViews(GpuDevice* tDevice)
 {
-    GpuDevice*         Device = FrameCache->getDevice();
-    D3D12_RESOURCE_DESC Desc   = mResource.getResourceDesc();
+    D3D12_RESOURCE_DESC Desc = mResource.getResourceDesc();
 
     // Create RTV
     if ((Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) != 0 && checkRtvSupport())
     {
-        mRTV = FrameCache->mGlobal->mStaticDescriptors[D3D12_DESCRIPTOR_HEAP_TYPE_RTV].allocate();
-        Device->asHandle()->CreateRenderTargetView(mResource.asHandle(), nullptr, mRTV.getDescriptorHandle());
+        mRTV = tDevice->allocateCpuDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+        tDevice->asHandle()->CreateRenderTargetView(mResource.asHandle(), nullptr, mRTV.getDescriptorHandle());
     }
 
     if ((Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) != 0 && checkDsvSupport())
     {
-         mDSV = FrameCache->mGlobal->mStaticDescriptors[D3D12_DESCRIPTOR_HEAP_TYPE_DSV].allocate();
-        Device->asHandle()->CreateDepthStencilView(mResource.asHandle(), nullptr, mDSV.getDescriptorHandle());
+         mDSV = tDevice->allocateCpuDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+         tDevice->asHandle()->CreateDepthStencilView(mResource.asHandle(), nullptr, mDSV.getDescriptorHandle());
     }
 
     if ((Desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) == 0 && checkSrvSupport())
@@ -157,18 +155,18 @@ GpuTexture::createViews(GpuFrameCache* FrameCache)
         srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
         srvDesc.Texture2D.MipLevels = 1;
 
-        mSRV = FrameCache->mGlobal->mStaticDescriptors[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].allocate();
-        Device->asHandle()->CreateShaderResourceView(mResource.asHandle(), &srvDesc, mSRV.getDescriptorHandle());
+        mSRV = tDevice->allocateCpuDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        tDevice->asHandle()->CreateShaderResourceView(mResource.asHandle(), &srvDesc, mSRV.getDescriptorHandle());
     }
 
     // Create UAV for each mip (only supported for 1D and 2D textures).
     if ((Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS ) != 0 && checkUavSupport() && Desc.DepthOrArraySize == 1 )
     {
-         mUAV = FrameCache->mGlobal->mStaticDescriptors[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].allocate(Desc.MipLevels);
+         mUAV = tDevice->allocateCpuDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, Desc.MipLevels);
          for ( int i = 0; i < Desc.MipLevels; ++i )
          {
              D3D12_UNORDERED_ACCESS_VIEW_DESC UavDesc = GetUAVDesc(&Desc, i);
-             Device->asHandle()->CreateUnorderedAccessView(
+             tDevice->asHandle()->CreateUnorderedAccessView(
                      mResource.asHandle(), nullptr, &UavDesc, mUAV.getDescriptorHandle(i));
          }
     }

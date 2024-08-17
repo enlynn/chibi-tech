@@ -1,10 +1,12 @@
 #pragma once
 
+#include <memory>
+
 #include "GpuQueue.h"
 
 class GpuQueueManager {
 public:
-	GpuQueueManager(GpuDevice* tDevice);
+	GpuQueueManager(std::shared_ptr<GpuDevice> tDevice);
 	~GpuQueueManager() { destroy(); }
 
 	void destroy();

@@ -19,7 +19,6 @@ GpuSwapchain::GpuSwapchain(GpuFrameCache* FrameCache, GpuSwapchainInfo& Info, co
 {
 	ASSERT(mInfo.mDevice);
     ASSERT(mInfo.mPresentQueue);
-    ASSERT(mInfo.mRenderTargetDesciptorHeap);
 
     auto [windowWidth, windowHeight] = tWindow.getSize();
 
@@ -123,13 +122,13 @@ void GpuSwapchain::updateRenderTargetViews(GpuFrameCache* FrameCache)
         {
             const GpuResource* Resource = mBackbuffers[i].getResource();
             FrameCache->removeTrackedResource(*Resource);
-            mBackbuffers[i].releaseUnsafe(FrameCache);
+            mBackbuffers[i].releaseUnsafe(mInfo.mDevice.get());
         }
 
         GpuResource Backbuffer = GpuResource(*mInfo.mDevice, D3DBackbuffer, ClearValue);
         FrameCache->trackResource(Backbuffer, D3D12_RESOURCE_STATE_COMMON);
 
-        mBackbuffers[i] = GpuTexture(FrameCache, Backbuffer);
+        mBackbuffers[i] = GpuTexture(mInfo.mDevice.get(), Backbuffer);
     }
 }
 
@@ -164,7 +163,7 @@ void  GpuSwapchain::release(GpuFrameCache* FrameCache)
 {
 	ForRange(u32, i, cMaxBackBufferCount)
 	{ // Release all possible backbuffers
-        mBackbuffers[i].releaseUnsafe(FrameCache);
+        mBackbuffers[i].releaseUnsafe(mInfo.mDevice.get());
 	}
 
 	ComSafeRelease(mHandle);

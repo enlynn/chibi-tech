@@ -1,15 +1,16 @@
 #pragma once
 
-#include "D3D12Common.h"
-//#include "GpuResource.h"
-#include "GpuDescriptorAllocator.h"
+#include <memory>
 
-class GpuResource;
-class GpuState;
+#include "D3D12Common.h"
+#include "GpuDescriptorAllocator.h"
+#include "GpuResource.h"
+
+class GpuDevice;
 
 class GpuShaderResourceView {
 public:
-    GpuShaderResourceView(GpuState* tGpuContext, const GpuResource* tResource, D3D12_SHADER_RESOURCE_VIEW_DESC* tSrv = nullptr);
+    GpuShaderResourceView(std::shared_ptr<GpuDevice> tpDevice, const GpuResource* tResource, D3D12_SHADER_RESOURCE_VIEW_DESC* tSrv = nullptr);
     ~GpuShaderResourceView() { release(); }
 
     void release();
@@ -19,15 +20,14 @@ public:
 
 private:
     // TODO(enlynn): don't store a raw pointer like this.
-    GpuState*     mGpuContext{nullptr};
-
-    const GpuResource*  mResource{nullptr};
-    CpuDescriptor mDescriptor{};
+    std::shared_ptr<GpuDevice> mDevice{ nullptr };
+    const GpuResource*         mResource{nullptr};
+    CpuDescriptor              mDescriptor{};
 };
 
 class GpuUnorderedAccessView {
 public:
-    GpuUnorderedAccessView(GpuState* tGpuContext, const GpuResource* tResource, const GpuResource* tCounterResource, D3D12_UNORDERED_ACCESS_VIEW_DESC* tSrv = nullptr);
+    GpuUnorderedAccessView(std::shared_ptr<GpuDevice> tpDevice, const GpuResource* tResource, const GpuResource* tCounterResource, D3D12_UNORDERED_ACCESS_VIEW_DESC* tSrv = nullptr);
     ~GpuUnorderedAccessView() { release(); }
 
     void release();
@@ -39,9 +39,8 @@ public:
 
 private:
     // TODO(enlynn): don't store a raw pointer like this.
-    GpuState*     mGpuContext{nullptr};
-
-    const GpuResource*  mResource{nullptr};
-    const GpuResource*  mCounterResource{nullptr};
-    CpuDescriptor       mDescriptor{};
+    std::shared_ptr<GpuDevice> mDevice{nullptr};
+    const GpuResource*         mResource{nullptr};
+    const GpuResource*         mCounterResource{nullptr};
+    CpuDescriptor              mDescriptor{};
 };

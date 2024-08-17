@@ -22,14 +22,13 @@ namespace ct::os {
 struct GpuSwapchainInfo
 {
 	// Required to set.
-	GpuDevice*               mDevice                    = nullptr;
-	GpuQueue*         mPresentQueue              = nullptr;
-	CpuDescriptorAllocator*  mRenderTargetDesciptorHeap = nullptr;
+	std::shared_ptr<GpuDevice> mDevice          = nullptr;
+	GpuQueue*                  mPresentQueue    = nullptr;
 	// Optional settings
-	u32                      mBackbufferCount      = 2;                          // TODO(enlynn): Determine the correct number of backbuffers
-	DXGI_FORMAT              mSwapchainFormat      = DXGI_FORMAT_R8G8B8A8_UNORM; // TODO(enlynn): HDR?
-	bool                     mAllowTearing         = false;                      // TODO(enlynn): How should tearing be supported?
-	bool                     mVSyncEnabled         = true;
+	u32                        mBackbufferCount = 2;                          // TODO(enlynn): Determine the correct number of backbuffers
+	DXGI_FORMAT                mSwapchainFormat = DXGI_FORMAT_R8G8B8A8_UNORM; // TODO(enlynn): HDR?
+	bool                       mAllowTearing    = false;                      // TODO(enlynn): How should tearing be supported?
+	bool                       mVSyncEnabled    = true;
 };
 
 class GpuSwapchain
